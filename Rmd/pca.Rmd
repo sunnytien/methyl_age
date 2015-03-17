@@ -1,0 +1,85 @@
+---
+title: "PCA"
+output: 
+  html_document:
+    fig_width: 10
+    fig_height: 5
+runtime: shiny
+---
+
+```{r init, include=FALSE}
+  library("pcaMethods")
+  library("dplyr")
+  library("ggvis")
+
+  load("~/Eric_project/methyl_age/data/pca.Rdata")
+  load("~/Eric_project/methyl_age/data/sample.info.Rdata")
+
+  scores = p %>%
+    scores %>%
+    as.data.frame %>%
+    mutate(gsm.id=rownames(.)) %>%
+    inner_join(sample.info %>%
+                 mutate(series.id=factor(series.id)))
+
+```
+
+Principle component analysis of methylation arrays after BMIQ normalization
+
+
+# PCA plot
+```{r scatter, echo=FALSE}
+
+  lb = linked_brush(keys=scores$gsm.id, "red")
+
+  scores %>%
+    ggvis(~PC1, ~PC2, key:= ~gsm.id) %>%
+    layer_points(fill=~tissue, fill.brush:="red") %>%
+    lb$input()
+
+```
+
+# Tissue Type
+```{r tissue, echo=FALSE}
+
+  selected = lb$selected
+  scores.selected = reactive({
+    scores[selected(), ]
+  })
+
+  scores %>%
+    ggvis(~tissue) %>%
+    layer_bars() %>%
+    add_data(scores.selected) %>%
+    layer_bars(fill:="red") %>%
+    add_axis("x",
+             title="Tissue",
+             title_offset=100,
+             properties=axis_props(labels=list(angle=45,
+                                              align="left")))
+```
+
+# GEO series
+
+```{r gse, echo=FALSE}
+  scores %>%
+    ggvis(~series.id) %>%
+    layer_bars() %>%
+    add_data(scores.selected) %>%
+    layer_bars(fill:="red") %>%
+    add_axis("x",
+             title="GEO series",
+             title_offset=100,
+             properties=axis_props(labels=list(angle=45,
+                                              align="left")))
+```
+
+# Age
+
+```{r age, echo=FALSE}
+
+  scores %>%
+    ggvis(~age) %>%
+    layer_histograms()
+```
+
