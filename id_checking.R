@@ -6,8 +6,6 @@ library("doMC")
 library("BatchJobs")
 
 
-
-
 find.matches = function(gse.id){
 
   read.series.matrix = function(x){
@@ -73,16 +71,24 @@ check.gse = function(x){
   return(T)
 }
 
+save.matches = function(x){
+  result.file = paste("./data/id_checking/", x, ".Rdata", sep="")
+  if(!file.exists(result.file)){
+    r = find.matches(x)
+    save(r, file=result.file)
+  } else{cat(paste(result.file, "already exists\n"))}
+  return(T)
+}
+
 load("./sample.info.Rdata")
 
 series = sample.info %>%
   select(series.id) %>%
   distinct
 
-reg = makeRegistry("id_checking", packages=c("dplyr", "tidyr"))
-batchMap(reg, find.matches, series$series.id)
-submitJobs(reg, 1)
+save.matches.safe = failwith(F, save.matches)
 
+llply(series$series.id, save.matches.safe, .parallel=F)
 
 
 
