@@ -1,4 +1,5 @@
 library("data.table")
+library("plyr")
 library("dplyr")
 library("tidyr")
 library("doMC")
@@ -72,7 +73,7 @@ find.matches = function(gse.id){
     ungroup  
 }
 
-find.matches.safe = failwith(NA, find.matchs)
+find.matches.safe = failwith(NA, find.matches)
 
 series = sample.info %>%
   select(series.id) %>%
@@ -80,7 +81,7 @@ series = sample.info %>%
 
 registerDoMC(2)
 
-matches = llply(series$series.id, find.matches.safe, parallel=T)
+matches = llply(series$series.id, find.matches.safe, .parallel=T)
 save(matches, file="./data/matches.Rdata")
 
 
