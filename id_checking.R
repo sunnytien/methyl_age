@@ -1,8 +1,9 @@
 library("data.table")
 library("dplyr")
 library("tidyr")
+library("doMC")
 
-
+load("./data/sample.info.Rdata")
 
 read.series.matrix = function(x){
   
@@ -12,16 +13,30 @@ read.series.matrix = function(x){
   fread(tmp)
 }
 
+get.file = function(x){
+  files = list.files("./data", recursive=T, full.names=T) %>%
+                  grep(x, ., value=T)
+  function(y) grep(y, files, value=T)
+}
+
+get.mm.file = get.file("meth_matrices.Rdata")
+get.sm.file = get.file("series_matrix.txt$")
+
+download.sm.file = function(x){
+  system("wget")
+}
+
 find.matches = function(gse.id){
 
   mm.file = get.mm.file(gse.id)
-  sm.file = get.sm.file(sm.file)
+  sm.file = get.sm.file(gse.id)
+  
   
   if(length(mm.file) == 0) stop(paste("No meth_matrix file found for", gse.id, "\n"))
   if(length(sm.file) == 0) stop(paste("No series matrix file found for", gse.id, "\n"))
   
   cat(paste("Meth matrix file found at:", mm.file, "\n"))
-  cat(paste("Series matrix file found at:", mm.file, "\n"))
+  cat(paste("Series matrix file found at:", sm.file, "\n"))
   
   load("./data/sample.info.Rdata")
   load(mm.file)
@@ -56,4 +71,16 @@ find.matches = function(gse.id){
     filter(r == max(r)) %>%
     ungroup  
 }
-  
+
+find.matches.safe = failwith(NA, find.matchs)
+
+series = sample.info %>%
+  select(series.id) %>%
+  distinct
+
+registerDoMC(2)
+
+matches = llply(series$series.id, find.matches.safe, parallel=T)
+save(matches, file="./data/matches.Rdata")
+
+
