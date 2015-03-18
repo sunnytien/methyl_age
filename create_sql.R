@@ -38,5 +38,5 @@ cat(paste("Copying", length(bmiq.files), "files to database\n"))
 results = llply(bmiq.files, 
                 add.to.sql.safe, 
                 db=db,
-                table.name="test4",
+                table.name="beta",
                 .progress="text")
