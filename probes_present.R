@@ -2,24 +2,12 @@
 
 library("dplyr")
 
-load("./data/sample.info.Rdata")
+db = src_sqlite("./data/BMIQ.db")
+beta = tbl(db, "test4")
 
-get.number.of.probes = function(gsm){
-  filename = grep(gsm, gsm.files, value=T)
-  if(length(filename) == 0) return(NA)
-  
-  b = get(load(filename))
-  length(b$nbeta)
-}
-
-gsm.files = list.files("./data/",
-                       recursive=T,
-                       full.names=T) %>%
-  (function(x) grep("_BMIQ.Rdata$", x, value=T)) 
-
-
-probes.present = sample.info %>%
+probes.present = beta %>%
   group_by(gsm.id) %>%
-  do(get.number.of.probes(.$gsm.id[1]))
+  summarize(n.probes=n()) %>%
+  collect
 
-save(probes.present, file="./data/probes.present.Rdata")
+save(probes.present, file="probes.present.Rdata")
