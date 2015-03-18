@@ -3,18 +3,19 @@ library("plyr")
 library("dplyr")
 library("tidyr")
 library("doMC")
+library("BatchJobs")
 
-load("./data/sample.info.Rdata")
+
 
 
 find.matches = function(gse.id){
 
   read.series.matrix = function(x){
     
-    tmp = tempfile()
-    system(paste("cat ", x, " | grep -v ! >", tmp, sep=""))
+    tmp = paste(x, "_cleaned", sep="")
+    if(!file.exists(tmp)) system(paste("cat ", x, " | grep -v ! >", tmp, sep=""))
     
-    fread(tmp, na.strings=c("NA", "na", "'null'", "NULL"))
+    fread(tmp, na.strings=c("NA", "na", "'null'", "NULL"), showProgress=F)
   }
   
   get.file = function(x){
@@ -25,10 +26,6 @@ find.matches = function(gse.id){
   
   get.mm.file = get.file("meth_matrices.Rdata")
   get.sm.file = get.file("series_matrix.txt$")
-  
-  download.sm.file = function(x){
-    system("wget")
-  }
   
   
   cat(paste("\nInitiating check for", gse.id, "\n"))
@@ -54,31 +51,38 @@ find.matches = function(gse.id){
   
   beta.raw = meth / (meth + unmeth + 100)
   
-  sites = intersect(rownames(beta.normed), rownames(beta.raw)) %>%
-    sample(5000)
+  sites = intersect(rownames(beta.normed), rownames(beta.raw))
+  
+  cat(paste(length(sites), "sities in intersection\n"))
   
   beta.normed = beta.normed[sites, ]
   beta.raw = beta.raw[sites, ]
-  
   
   r = cor(beta.normed, beta.raw, use="pair", method="pearson") %>%
     as.data.frame %>%
     mutate(normed.id=rownames(.)) %>%
     gather(raw.id, r, -normed.id) %>%
     group_by(normed.id) %>%
-    filter(r == max(r)) %>%
     ungroup  
-  
-  if(all(r$normed.id == r$raw.id)) paste(cat(gse.id, "ids match!\n")) else
-    cat(paste(gse.id, "ids DO NOT MATCH\n"))
 }
 
-find.matches.safe = failwith(NA, find.matches)
+check.gse = function(x){
+  r = find.matches(x)
+  if(all(r$normed.id == r$raw.id)) paste(cat(gse.id, "ids match!\n")) else
+    cat(paste(gse.id, "ids DO NOT MATCH\n"))
+  return(T)
+}
+
+load("./sample.info.Rdata")
 
 series = sample.info %>%
   select(series.id) %>%
   distinct
 
-empty = lapply(series$series.id[2], find.matches.safe)
+reg = makeRegistry("id_checking", packages=c("dplyr", "tidyr"))
+batchMap(reg, find.matches, series$series.id)
+submitJobs(reg, 1)
+
+
 
 
