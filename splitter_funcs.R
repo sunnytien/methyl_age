@@ -9,8 +9,8 @@ library("tidyr")
 library("IlluminaHumanMethylation450kanno.ilmn12.hg19")
 library("BatchJobs")
 
-#DATA_DIR = "./data/"
-DATA_DIR = "./"
+DATA_DIR = "./data/"
+#DATA_DIR = "./"
 
 data(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
@@ -52,7 +52,7 @@ get.beta.notidat = function(gse.id){
   
   if(ag("meth")) return(get.beta.meth(d))
   if(ag("signal")) return(get.beta.signal(d))
-  stop("Did not detect filetype\n")
+  stop("Did not detect filetype (methylation or signal)\n")
 }
 
 get.beta.meth = function(d){
@@ -79,7 +79,7 @@ get.beta.meth = function(d){
   colnames(beta) = colnames(meth)
   
   id.column = grep("ID", colnames(d), ignore.case=T, value=T) %>%
-    grep("REF|Target", ., ignore.case=T, value=T)
+    grep("REF|Targe|IlluminID|geneInfo", ., ignore.case=T, value=T)
   
   ids = d %>%
     select(contains(id.column)) %>%
@@ -117,7 +117,7 @@ get.beta.signal = function(d){
   colnames(beta) = colnames(meth)
   
   id.column = grep("ID", colnames(d), ignore.case=T, value=T) %>%
-    grep("REF|Target|geneInfo", ., ignore.case=T, value=T)
+    grep("REF|Target|geneInfo|IlluminID|V1", ., ignore.case=T, value=T)
   
   ids = d %>%
     select(contains(id.column)) %>%
@@ -165,6 +165,8 @@ map.to.gse = function(gse.id, beta){
   if(file.exists(paste(DATA_DIR, gse.id, "/GSM/mapping.Rdata", sep=""))){
     return(get(load(paste(DATA_DIR, gse.id, "/GSM/mapping.Rdata", sep=""))))
   }
+  
+  if(gse.id %in% c("GSE56581", "GSE56105")) return(map.to.gse.custom(gse.id))
   
   if(all(grepl("GSM[0-9]+", colnames(beta)))) return(map.to.gse.simple(beta))
   
@@ -216,7 +218,8 @@ map.to.gse.cor = function(gse.id, beta){
   
   beta.normed = d %>%
     select(starts_with("GSM")) %>%
-    as.matrix
+    as.matrix %>%
+    apply(2, as.numeric)
   
   ids = d %>%
     select(contains("ID")) %>%
@@ -254,5 +257,43 @@ map.to.gse.cor = function(gse.id, beta){
   return(correlations)
 }
 
+map.to.gse.custom = function(gse.id){
+  if(gse.id=="GSE56105") return(mapper.GSE56105())
+  if(gse.id=="GSE56581") return(mapper.GSE56581())
+  
+  stop("Could not find custom function for", gse.id, "\n")
+}
 
+mapper.GSE56105 = function(){
+  
+  header = paste(DATA_DIR, "GSE56105/GSE56105_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("Sample_title|Sample_geo_accession", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id))
+  
+  return(correlations)
+  
+}
 
+mapper.GSE56581 = function(){
+  header = paste(DATA_DIR, "GSE56581/GSE56581_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("Sample_title|Sample_geo_accession", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id)) %>%
+    mutate(raw.id=str_match(raw.id, "[0-9]+"))
+  
+}
