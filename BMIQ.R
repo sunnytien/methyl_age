@@ -41,5 +41,5 @@ reg = makeRegistry("BMIQ", packages=c("wateRmelon"))
 batchMap(reg, bmiq.normalization, files, more.args=list(types=types))
 submitJobs(reg, 1)
 
-submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=100))
+submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=20))
 
