@@ -9,8 +9,8 @@ library("tidyr")
 library("IlluminaHumanMethylation450kanno.ilmn12.hg19")
 library("BatchJobs")
 
-DATA_DIR = "./data/"
-#DATA_DIR = "./"
+#DATA_DIR = "./data/"
+DATA_DIR = "~/data/methyl_age/GEO/"
 
 data(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 

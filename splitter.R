@@ -5,7 +5,7 @@ source("splitter_funcs.R")
 gses = list.files(DATA_DIR) %>%
   grep("GSE", ., value=T)
 
-reg = makeRegistry("splitter2", 
+reg = makeRegistry("splitter4", 
                    packages=c("dplyr", 
                               "IlluminaHumanMethylation450kanno.ilmn12.hg19",          
                               "tidyr", 
@@ -14,4 +14,4 @@ reg = makeRegistry("splitter2",
                    src.files="splitter_funcs.R")
 
 batchMap(reg, splitter, gses)
-submitJobs(reg,10)
+submitJobs(reg)
