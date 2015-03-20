@@ -20,25 +20,18 @@ bmiq.normalization = function(filename, types, subsample=NULL){
   save(betas.normed, file=paste(base, 
                                 "_BMIQ.Rdata",
                                 sep=""))
-  
-  if(!is.null(subsample)){
-    sites = subsample[subsample %in% names(betas)]
-    betas.reduced = betas.normed$nbeta[sites]
-    
-    save(betas.reduced, 
-         file=paste(base,
-                    "_BMIQ_reduced.Rdata",
-                    sep=""))
-  }
+
   return(T)
 }
 
 files = list.files("~/data/methyl_age/GEO", 
                    recursive=T,
                    full.names=T) %>%
-  (function(x) grep("GSM", x, value=T)) %>%
+  (function(x) grep("GSM/GSM", x, value=T)) %>%
   (function(x) grep("Rdata$", x, value=T)) %>%
-  (function(x) grep("BMIQ", x, value=T, invert=T))
+  (function(x) grep("BMIQ", x, value=T, invert=T)) %>%
+  grep("GSE58477", ., value=T, invert=T) %>%
+  grep("GSE32146", ., value=T, inver=T)
 
 
 types = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Manifest$Type %>%
