@@ -1,6 +1,9 @@
 ## rewriting splitting function to be generalized
 ## idea is for it to be broadly applicable do all GSE sets
 
+## this turned into a mess
+## but it works
+
 library("dplyr")
 library('stringr')
 library("GEOquery")
@@ -70,8 +73,8 @@ get.beta.meth = function(d){
   
   if(any(dim(meth) != dim(unmeth))) stop("meth and unmeth matrices have different dimensions")
   
-  colnames(meth) = gsub(".Methylat.+$", "", colnames(meth), ignore.case=T, perl=T)
-  colnames(unmeth) = gsub(".Unmethyl.+$", "", colnames(meth), ignore.case=T, perl=T)
+  colnames(meth) = gsub(".Meth.+$", "", colnames(meth), ignore.case=T, perl=T)
+  colnames(unmeth) = gsub(".Unmeth.+$", "", colnames(meth), ignore.case=T, perl=T)
   
   if(any(colnames(meth) != colnames(unmeth))) stop("Different column names for meth and unmeth")
   
@@ -116,14 +119,17 @@ get.beta.signal = function(d){
   beta = meth / (meth + unmeth + 100)
   colnames(beta) = colnames(meth)
   
-  id.column = grep("ID|Info|V1", colnames(d), ignore.case=T, value=T) %>%
+  id.column = grep("ID|Info|V1$", colnames(d), ignore.case=T, value=T) %>%
     grep("REF|Targe|geneInfo|IlluminID|V1", ., ignore.case=T, value=T)
+  
+  if(ncol(ids) > 1) warn("Multiple ID columns found\n")
+  
+  id.column = if(all(id.column == c("V1", "TargetID"))) "TargetID" else
+    id.column
   
   ids = d %>%
     select(contains(id.column)) %>%
     as.data.frame
-
-  if(ncol(ids) > 1) warn("Multiple ID columns found\n")
   
   rownames(beta) = ids[[1]]
   return(beta)
@@ -166,7 +172,16 @@ map.to.gse = function(gse.id, beta){
     return(get(load(paste(DATA_DIR, gse.id, "/GSM/mapping.Rdata", sep=""))))
   }
   
-  if(gse.id %in% c("GSE56581", "GSE56105")) return(map.to.gse.custom(gse.id))
+  if(gse.id %in% c("GSE56581",
+                   "GSE56105",
+                   "GSE43414",
+                   "GSE53051",
+                   "GSE56046",
+                   "GSE61431",
+                   "GSE58477",
+                   "GSE61151",
+                   "GSE36064",
+                   "GSE41826")) return(map.to.gse.custom(gse.id))
   
   if(all(grepl("GSM[0-9]+", colnames(beta)))) return(map.to.gse.simple(beta))
   
@@ -260,6 +275,14 @@ map.to.gse.cor = function(gse.id, beta){
 map.to.gse.custom = function(gse.id){
   if(gse.id=="GSE56105") return(mapper.GSE56105())
   if(gse.id=="GSE56581") return(mapper.GSE56581())
+  if(gse.id=="GSE43414") return(mapper.GSE43414())
+  if(gse.id=="GSE53051") return(mapper.GSE53051())
+  if(gse.id=="GSE56046") return(mapper.GSE56046())
+  if(gse.id=="GSE61431") return(mapper.GSE61431())
+  if(gse.id=="GSE58477") return(mapper.GSE58477())
+  if(gse.id=="GSE61151") return(mapper.GSE61151())
+  if(gse.id=="GSE36064") return(mapper.GSE36064())
+  if(gse.id=="GSE41826") return(mapper.GSE41826())
   
   stop("Could not find custom function for", gse.id, "\n")
 }
@@ -296,4 +319,145 @@ mapper.GSE56581 = function(){
     filter(grepl("GSM", normed.id)) %>%
     mutate(raw.id=str_match(raw.id, "[0-9]+"))
   
+}
+
+mapper.GSE43414 = function(){
+  header = paste(DATA_DIR, "GSE43414/GSE43414_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("Sample_title|Sample_geo_accession", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id)) %>%
+    mutate(Aii=grepl("Aii$", raw.id)) %>%
+    mutate(raw.id=str_match(raw.id, "[0-9]+_R[0-9][0-9]C[0-9][0-9]")[,1]) %>%
+    mutate(raw.id=ifelse(Aii, paste(raw.id, "1", sep="."), raw.id))
+  
+  return(correlations)
+  
+}
+
+mapper.GSE53051 = function(){
+  header = paste(DATA_DIR, "GSE53051/GSE53051_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("Sample_description|Sample_geo_accession", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[2]], 
+                            normed.id=header[[1]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id))
+  
+  return(correlations)
+  
+}
+
+mapper.GSE56046 = function(){
+  header = paste(DATA_DIR, "GSE56046/GSE56046_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("Sample_title|Sample_geo_accession", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id)) %>%
+    mutate(raw.id=str_match(raw.id, "[0-9]+")[,1])
+  
+  return(correlations)
+  
+}
+
+mapper.GSE61431 = function(){
+  header = paste(DATA_DIR, "GSE61431/GSE61431_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("barcode|ID_REF", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id)) %>%
+    mutate(raw.id=gsub("barcode: ", "", raw.id))
+  
+  return(correlations)
+}
+
+mapper.GSE58477 = function(){
+  
+  header = paste(DATA_DIR, "GSE58477/GSE58477_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("Sample_title|ID_REF", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id)) %>%
+    mutate(raw.id=str_match(raw.id, "[0-9]+_R.+$")[,1])
+  
+  return(correlations)
+  
+}
+
+mapper.GSE61151 = function(){
+  
+  header = paste(DATA_DIR, "GSE61151/GSE61151_series_matrix.txt", sep="") %>%
+    readLines %>%
+    grep("Sample_title|ID_REF", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id)) %>%
+    mutate(raw.id=str_match(raw.id, "p[0-9].+$")[,1])
+  
+  return(correlations)
+  
+}
+
+mapper.GSE36064 = function(){
+  header = paste(DATA_DIR, "GSE36064/GSE36064_series_matrix.txt", sep="") %>%
+    readLines(200) %>%
+    grep("Sample_title|ID_REF", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id)) %>%
+    mutate(raw.id=str_match(raw.id, "CHB[0-9]+"))
+  
+  return(correlations)
+}
+
+mapper.GSE41826 = function(){
+  header = paste(DATA_DIR, "GSE41826/GSE41826_series_matrix.txt", sep="") %>%
+    readLines(200) %>%
+    grep("Sample_description|ID_REF", ., value=T) %>%
+    strsplit("\t")
+  
+  correlations = data.frame(raw.id=header[[1]], 
+                            normed.id=header[[2]],
+                            stringsAsFactors=F) %>%
+    mutate(raw.id=gsub("\"", "", raw.id)) %>%
+    mutate(normed.id=gsub("\"", "", normed.id)) %>%
+    filter(grepl("GSM", normed.id))
 }
