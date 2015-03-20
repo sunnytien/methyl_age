@@ -78,8 +78,8 @@ get.beta.meth = function(d){
   beta = meth / (meth + unmeth + 100)
   colnames(beta) = colnames(meth)
   
-  id.column = grep("ID", colnames(d), ignore.case=T, value=T) %>%
-    grep("REF|Targe|IlluminID|geneInfo", ., ignore.case=T, value=T)
+  id.column = grep("ID|Info|V1", colnames(d), ignore.case=T, value=T) %>%
+    grep("REF|Targe|IlluminID|geneInfo|V1", ., ignore.case=T, value=T)
   
   ids = d %>%
     select(contains(id.column)) %>%
@@ -116,8 +116,8 @@ get.beta.signal = function(d){
   beta = meth / (meth + unmeth + 100)
   colnames(beta) = colnames(meth)
   
-  id.column = grep("ID", colnames(d), ignore.case=T, value=T) %>%
-    grep("REF|Target|geneInfo|IlluminID|V1", ., ignore.case=T, value=T)
+  id.column = grep("ID|Info|V1", colnames(d), ignore.case=T, value=T) %>%
+    grep("REF|Targe|geneInfo|IlluminID|V1", ., ignore.case=T, value=T)
   
   ids = d %>%
     select(contains(id.column)) %>%
