@@ -5,7 +5,6 @@ library("tidyr")
 library("doMC")
 library("BatchJobs")
 
-
 find.matches = function(gse.id){
 
   read.series.matrix = function(x){
@@ -17,7 +16,7 @@ find.matches = function(gse.id){
   }
   
   get.file = function(x){
-    files = list.files("./data", recursive=T, full.names=T) %>%
+    files = list.files("./", recursive=T, full.names=T) %>%
       grep(x, ., value=T)
     function(y) grep(y, files, value=T)
   }
@@ -37,7 +36,8 @@ find.matches = function(gse.id){
   cat(paste("Meth matrix file found at:", mm.file, "\n"))
   cat(paste("Series matrix file found at:", sm.file, "\n"))
   
-  load("./data/sample.info.Rdata")
+  #load("./data/sample.info.Rdata")
+  load("sample.info.Rdata")
   load(mm.file)
   d = read.series.matrix(sm.file)
   
@@ -80,7 +80,8 @@ save.matches = function(x){
   return(T)
 }
 
-load("./sample.info.Rdata")
+#load("./data/sample.info.Rdata")
+load("sample.info.Rdata")
 
 series = sample.info %>%
   select(series.id) %>%
@@ -88,7 +89,11 @@ series = sample.info %>%
 
 save.matches.safe = failwith(F, save.matches)
 
-llply(series$series.id, save.matches.safe, .parallel=F)
+#llply(series$series.id, save.matches.safe, .parallel=F)
+
+reg = makeRegistry("id_checking3", packages=c("dplyr", "tidyr", "data.table"))
+batchMap(reg, find.matches, series$series.id)
+submitJobs(1)
 
 
 
