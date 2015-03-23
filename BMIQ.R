@@ -1,6 +1,7 @@
 library("wateRmelon")
 library("dplyr")
 library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+library("BatchJobs")
 data(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
 
@@ -31,8 +32,9 @@ files = list.files("~/data/methyl_age/GEO",
   (function(x) grep("Rdata$", x, value=T)) %>%
   (function(x) grep("BMIQ", x, value=T, invert=T)) %>%
   grep("GSE58477", ., value=T, invert=T) %>%
-  grep("GSE32146", ., value=T, inver=T)
+  grep("GSE32146", ., value=T, invert=T)
 
+cat(paste("Normalizing", length(files), "files\n"))
 
 types = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Manifest$Type %>%
   as.character %>%
@@ -40,11 +42,9 @@ types = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Manifest$Type %>%
   as.numeric
 names(types) = rownames(IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Manifest)
 
-subsample = sample(names(types), 1000)
 
 reg = makeRegistry("BMIQ", packages=c("wateRmelon"))
-batchMap(reg, bmiq.normalization, files, more.args=list(types=types, 
-                                                        subsample=subsample))
+batchMap(reg, bmiq.normalization, files, more.args=list(types=types))
 submitJobs(reg, 1)
 submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=20))
 
