@@ -1,9 +1,9 @@
-library("plyr")
 library("dplyr")
 library("purrr")
 library("stringr")
-library("doParallel")
+library("RSQLite")
 
+print(sessionInfo())
 
 addNA = function(x, names){
   
@@ -18,7 +18,6 @@ addNA = function(x, names){
   }
 }
 
-registerDoParallel(10)
 
 db.file = "~/data/methyl_age/GEO/BMIQ.db"
 
@@ -29,10 +28,9 @@ files = list.files("~/data/methyl_age/GEO",
   grep("BMIQ", ., value=T) %>%
   grep("GSM", ., value=T) 
 
-#files = files[1:10]
+#ßfiles = sample(files, 1000)
 
-betas = llply(files, function(x) get(load(x))$nbeta,
-              .parallel=T)
+betas = lapply(files, function(x) get(load(x))$nbeta)
 
 names(betas) = str_match(files, "GSM[0-9]+")
 
@@ -42,15 +40,16 @@ sites = lapply(betas, names) %>%
 cat(paste(length(sites), "sites found\n"))
 cat("Adding missing sites to beta vectors\n")
 
-betas2 = llply(betas, addNA, sites,
-               .parallel=T)
+betas2 = lapply(betas, addNA, sites)
+
 rm(betas)
 
 cat("Binding into giant data.frame\n")
 
 betas.df = do.call(data.frame, betas2) %>%
   mutate(Probe=names(betas2[[1]])) %>%
-  select(Probe, starts_with("GSM"))
+  select(Probe, starts_with("GSM")) %>%
+  as.data.frame
 
 rm(betas2)
 
