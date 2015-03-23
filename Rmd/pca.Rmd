@@ -26,4 +26,43 @@ runtime: shiny
 
 Principle component analysis of methylation arrays after BMIQ normalization
 
+```{r scatter, echo=F}
+
+scores$id = 1:nrow(scores)
+lb = linked_brush(keys=scores$id, fill="grey")
+
+scores %>%
+  ggvis(~PC1, ~PC2, fill=~tissue, key := ~id, fill.brush:="blue") %>%
+  layer_points() %>%
+  lb$input()
+
+selected = lb$selected
+scores.selected = reactive({
+  scores[selected(), ]
+})
+
+
+```
+
+```{r summary info, echo=FALSE, fig.show='hold'}
+
+
+scores %>%
+  ggvis(~tissue, fill:="grey", opacity:=0.2) %>%
+  layer_bars() %>%
+  add_data(scores.selected) %>%
+  layer_bars(fill:="black", opacity:=1)
+
+scores %>%
+  ggvis(~series.id, fill:="grey", opacity:=0.2) %>%
+  layer_bars() %>%
+  add_data(scores.selected) %>%
+  layer_bars(fill:="black", opacity:=1)
+
+scores %>%
+  ggvis(~age, fill:="grey", opacity:=0.2) %>%
+  layer_histograms(width=5) %>%
+  add_data(scores.selected) %>%
+  layer_histograms(fill:="black", width=5, opacity:=1)
+
 ```
