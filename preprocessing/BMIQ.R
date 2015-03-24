@@ -57,11 +57,17 @@ chrXY = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Locations %>%
   mutate(probe=rownames(.)) %>%
   filter(chr %in% c("chrY", "chrX"))
 
+## discarding random probes
+random = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Other %>%
+  as.data.frame %>%
+  mutate(probe=rownames(.)) %>%
+  filter(Random_Loci!="")
+
 ## discarding multiple matching probes
 
 
-
 types = types[!(names(types) %in% chrXY$probe)]
+types = types[!(names(types) %in% random$probe)]
 
 ## conduct normalization
 reg = makeRegistry("BMIQ", packages=c("wateRmelon"))
