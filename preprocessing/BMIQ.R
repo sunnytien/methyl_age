@@ -7,44 +7,64 @@ data(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 
 bmiq.normalization = function(filename, types, subsample=NULL){
   
-  base = gsub(".Rdata$", "", filename)
+  require("wateRmelon")
   
+  # filename handling
   betas = get(load(filename))
-  betas = betas[names(betas) %in% names(types)] # discard unknown sites
-  betas[betas < 0] = 0 # sanity check
+  base = gsub(".Rdata$", "", filename)
+  outfile = paste(base, "_BMIQ.Rdata", sep="")
+  
+  # sanity check
+  betas[betas < 0] = 0 
   betas[betas > 1] = 1
+  betas = betas[!is.na(betas)]
+  betas = betas[!is.null(betas)]
   
-  beta.types = types[names(betas)] # get types for this betas
+  # making sure beta and types match
+  betas = betas[names(betas) %in% names(types)] 
+  beta.types = types[names(betas)] 
   
+  # conduct normalization and save
   betas.normed = BMIQ(betas, beta.types)
-  
-  save(betas.normed, file=paste(base, 
-                                "_BMIQ.Rdata",
-                                sep=""))
+  save(betas.normed, file=outfile)
 
   return(T)
 }
 
-files = list.files("~/data/methyl_age/GEO", 
+
+## get files for normalization
+files = list.files("~/data/methyl_age/GEO/GSM", 
                    recursive=T,
                    full.names=T) %>%
-  (function(x) grep("GSM/GSM", x, value=T)) %>%
-  (function(x) grep("Rdata$", x, value=T)) %>%
-  (function(x) grep("BMIQ", x, value=T, invert=T)) %>%
-  grep("GSE58477", ., value=T, invert=T) %>%
-  grep("GSE32146", ., value=T, invert=T)
+  grep("Rdata$", ., value=T) %>%
+  grep("BMIQ", ., value=T, invert=T)
 
 cat(paste("Normalizing", length(files), "files\n"))
 
+
+## getting types for sites
 types = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Manifest$Type %>%
   as.character %>%
   factor %>%
   as.numeric
 names(types) = rownames(IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Manifest)
 
+## discarding sites in ChrX and ChrY
+## BMIQ funtion will automatically discard sites
+## for which there is no type
+chrXY = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Locations %>%
+  as.data.frame %>%
+  mutate(probe=rownames(.)) %>%
+  filter(chr %in% c("chrY", "chrX"))
 
+## discarding multiple matching probes
+
+
+
+types = types[!(names(types) %in% chrXY$probe)]
+
+## conduct normalization
 reg = makeRegistry("BMIQ", packages=c("wateRmelon"))
 batchMap(reg, bmiq.normalization, files, more.args=list(types=types))
-submitJobs(reg, 1)
-submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=20))
+submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=50))
 
