@@ -1,5 +1,5 @@
 ---
-title: "PCA"
+title: "PCA of all GEO sets"
 output: 
   html_document:
     fig_width: 10
@@ -32,7 +32,7 @@ scores$id = 1:nrow(scores)
 lb = linked_brush(keys=scores$id, fill="grey")
 
 scores %>%
-  ggvis(~PC1, ~PC2, fill=~tissue, key := ~id, fill.brush:="blue") %>%
+  ggvis(~PC1, ~PC2, fill=~tissue, key := ~id, fill.brush:="black") %>%
   layer_points() %>%
   lb$input()
 
@@ -46,23 +46,33 @@ scores.selected = reactive({
 
 ```{r summary info, echo=FALSE, fig.show='hold'}
 
-
 scores %>%
   ggvis(~tissue, fill:="grey", opacity:=0.2) %>%
   layer_bars() %>%
   add_data(scores.selected) %>%
-  layer_bars(fill:="black", opacity:=1)
+  layer_bars(fill:="black", opacity:=1) %>%
+  add_axis("x",
+           title="Tissue",
+           title_offset=100,
+           properties=axis_props(labels=list(angle=45,
+                                             align="left")))
 
 scores %>%
   ggvis(~series.id, fill:="grey", opacity:=0.2) %>%
   layer_bars() %>%
   add_data(scores.selected) %>%
-  layer_bars(fill:="black", opacity:=1)
+  layer_bars(fill:="black", opacity:=1) %>%
+  add_axis("x",
+           title="GEO Series",
+           title_offset=100,
+           properties=axis_props(labels=list(angle=45,
+                                             align="left")))
 
 scores %>%
   ggvis(~age, fill:="grey", opacity:=0.2) %>%
   layer_histograms(width=5) %>%
   add_data(scores.selected) %>%
-  layer_histograms(fill:="black", width=5, opacity:=1)
+  layer_histograms(fill:="black", width=5, opacity:=1) %>%
+  add_axis("x", title="Age")
 
 ```

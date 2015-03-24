@@ -17,3 +17,5 @@ x = beta %>%
 p = pca(x, scale="none", center=T)
 
 save(p, file="./data/pca.Rdata")
+
+
