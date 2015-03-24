@@ -79,7 +79,7 @@ get.beta.notidat = function(gse.id){
   
   meth = get.meth(d)
   unmeth = get.unmeth(d)
-  if(colnames(meth) != colnames(unmeth)) warning("Column names aren't matching")
+  if(any(colnames(meth) != colnames(unmeth))) warning("Column names aren't matching")
   
   beta = (meth + 50) / (meth + unmeth + 100)
   

@@ -1,3 +1,6 @@
+#DATA_DIR = "~/data/methyl_age/GEO/"
+DATA_DIR = "./data/"
+
 get.header = function(gse.id){
   matrix.file = list.files(paste(DATA_DIR, gse.id, sep=""), full.names=T) %>%
     grep("series_matrix.txt$", ., value=T) 
@@ -11,8 +14,9 @@ get.header = function(gse.id){
     grep("^!|ID.REF", ., value=T)
 }
 
-gse.mapper = function(gse.id){
+gse.mapper = function(filename){
   
+
   require("dplyr")
   require("stringr")
   
@@ -56,9 +60,9 @@ gse.mapper = function(gse.id){
     ind = f(paste(id, "[^0-9]", sep=""), ids)
   }
   
-  if(length(ind) > 1) stop("Multiple matches for ID found")
-  if(length(ind) == 0) stop("No matches for ID found")
-  
+  if(length(ind) > 1) stop(paste("Multiple matches for ID found", gse.id, id))
+  if(length(ind) == 0) stop(paste("No matches for ID found", gse.id, id))
+
   data.frame(series.id=gse.id,
              gsm.id=gsms[[ind]],
              raw.id=id,
