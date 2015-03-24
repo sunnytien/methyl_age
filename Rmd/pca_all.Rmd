@@ -1,11 +1,13 @@
 ---
-title: "PCA of all GEO sets"
+title: "PCA analysis of normalized GEO sets"
 output: 
   html_document:
     fig_width: 10
     fig_height: 5
 runtime: shiny
 ---
+
+### PCA of all samples, including outliers
 
 ```{r init, include=FALSE}
   library("pcaMethods")
@@ -15,7 +17,7 @@ runtime: shiny
   load("~/Projects/methyl_age/data/pca.Rdata")
   load("~/Projects/methyl_age/data/sample.info.Rdata")
 
-  scores = p %>%
+  scores = p.all %>%
     scores %>%
     as.data.frame %>%
     mutate(gsm.id=rownames(.)) %>%
@@ -24,7 +26,7 @@ runtime: shiny
 
 ```
 
-Principle component analysis of methylation arrays after BMIQ normalization
+
 
 ```{r scatter, echo=F}
 
