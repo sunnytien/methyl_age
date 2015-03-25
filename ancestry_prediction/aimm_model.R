@@ -109,7 +109,7 @@ save(rf, rf.1000, rf.100, file="./data/rf.Rdata")
 
 ## performance testing
 
-features = rownames(importance(rf))
+features = rownames(importance(rf.100))
 
 testing = beta %>%
   filter(Probe %in% features) %>%
