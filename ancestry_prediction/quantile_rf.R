@@ -28,6 +28,9 @@ names(aimms) = NULL
 
 ## preparing beta-values
 
+db = src_sqlite("./data/BMIQ.db")
+beta = tbl(db, "BMIQ")
+
 chrXY = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Locations %>%
   as.data.frame %>%
   mutate(Probe=rownames(.)) %>%
@@ -41,9 +44,7 @@ IlluminaHumanMethylation450kDMR %<>% as.data.frame
 aimms = aimms[!(aimms %in% chrXY$Probe)]
 aimms = aimms[!(aimms %in% multiple_match$Probe)]
 aimms = aimms[!(aimms %in% IlluminaHumanMethylation450kDMR$Probe_ID)]
-
-db = src_sqlite("./data/BMIQ.db")
-beta = tbl(db, "BMIQ")
+aimms = aimms[aimms %in% (beta)]
 
 type = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Manifest %>%
   as.data.frame %>%
