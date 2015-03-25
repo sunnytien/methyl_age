@@ -78,12 +78,13 @@ probe.info = hm450 %>%
 probe.list = probe.info %>%
   split(., .$nearestGeneSymbol)
 
-reg = makeRegistry("linear_models", packages=c("lme4", "dplyr"))
+reg2 = makeRegistry("linear_models2", packages=c("lme4", "dplyr"))
 
-batchMap(reg, 
+batchMap(reg2, 
          run.model, 
          probe.list, 
          more.args=list(sample.info=sample.info,
                         predicted.ancestry=predicted.ancestry))
+submitJobs(reg2, chunk(findNotSubmitted(reg2), n.chunks=100))
 
 
