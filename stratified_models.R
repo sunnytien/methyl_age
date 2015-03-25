@@ -68,6 +68,7 @@ run.lme = function(probes, gene, beta){
 }
 
 load("./data/sample.info.Rdata")
+load("./data/predicted.ancestry.Rdata")
 
 select = dplyr::select
 group_by = dplyr::group_by

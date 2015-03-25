@@ -143,9 +143,9 @@ get.probe.ids = function(d){
 get.colnames = function(m){
   m %>% 
     colnames %>%
-    gsub("signal.+$", "", ., ignore.case=T) %>%
-    gsub("unmeth.+$", "", ., ignore.case=T) %>%
-    gsub("meth.+$", "", ., ignore.case=T) %>%
+    gsub("signal.*$", "", ., ignore.case=T) %>%
+    gsub("unmeth.*$", "", ., ignore.case=T) %>%
+    gsub("meth.*$", "", ., ignore.case=T) %>%
     gsub(".$", "", .)
 }
 
