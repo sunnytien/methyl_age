@@ -2,6 +2,7 @@ library("dplyr")
 library("tidyr")
 library("ggvis")
 library("randomForest")
+library("magrittr")
 
 get.ancestry = function(x){
   if(grepl("African", x)) return("AFR")
@@ -14,6 +15,7 @@ get.ancestry = function(x){
 
 load("./data/aimms.Rdata")
 load("./data/sample.info.Rdata")
+load("./data/rf.Rdata")
 
 training.ancestry = read.delim("./data/training_ancestry.txt",
                                header=T,
@@ -45,7 +47,7 @@ x.training = training %>%
 
 y.training = factor(training$ancestry)
 
-rf = randomForest(x.training, y.training,
+ancestry_rf = randomForest(x.training, y.training,
                   ntree=2000)
 
 save(rf, file='./data/ancestry_rf.Rdata')
@@ -58,19 +60,47 @@ x.testing = beta.aimms %>%
   t
 colnames(x.testing) = beta.aimms$Probe
 
-p = predict(rf, newdata=x.testing)
+p = predict(old.rf, newdata=x.testing[,rownames(importance(old.rf))],
+            type="vote")
 
-predicted.ancestry = data.frame(predicted.ancestry=p,
-                                gsm.id=names(p),
-                                stringsAsFactors=F)
+predicted.ancestry = p %>%
+  as.data.frame(stringsAsFactors=F) %>%
+  mutate(gsm.id = rownames(.)) %>%
+  inner_join(sample.info)
 
-sample.info2 = inner_join(sample.info, predicted.ancestry)
+dim(predicted.ancestry)
 
-tmp = sample.info2 %>%
-  filter(!is.na(ancestry))
+## finding appropriate cutoff
 
-series = tmp %>% 
-  filter(ancestry %in% c("EUR", "AFR", "ASN")) %>%
-  group_by(series.id, tissue) %>% 
-  summarize(acc=sum(ancestry==predicted.ancestry)/n())
+pdf("./figures/predicting_ancestry.pdf")
+predicted.ancestry %>% 
+  filter(!is.na(ancestry)) %>%
+  select(gsm.id, ancestry, EUR, AFR, ASN) %>%
+  gather(predicted.ancestry, prob, -ancestry, -gsm.id) %>%
+  filter(ancestry == predicted.ancestry) %>%
+  ggvis(~prob, fill=~ancestry) %>%
+  group_by(ancestry) %>%
+  layer_histograms() %>%
+  add_axis("x", title="Predicted Probability of Correct Ancestry")
+dev.off()
 
+ancestry.melted = predicted.ancestry %>% 
+  filter(!is.na(ancestry)) %>%
+  select(gsm.id, ancestry, EUR, AFR, ASN) %>%
+  gather(predicted.ancestry, prob, -ancestry, -gsm.id) 
+  
+
+ancestry.melted %>%
+  filter(!(ancestry %in% c("AFR", "EUR", "ASN"))) %>%
+  group_by(gsm.id) %>%
+  filter(prob == max(prob)) %>%
+  ggvis(~prob, fill=~ancestry) %>%
+  group_by(ancestry) %>%
+  layer_histograms()
+
+ancestry.melted %>%
+  filter(ancestry == "HSN") %>%
+  group_by(gsm.id) %>%
+  filter(prob == max(prob)) %>%
+  group_by(predicted.ancestry) %>%
+  summarize(count=n())
