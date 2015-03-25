@@ -61,14 +61,18 @@ x.testing = beta.aimms %>%
 colnames(x.testing) = beta.aimms$Probe
 
 p = predict(old.rf, newdata=x.testing[,rownames(importance(old.rf))],
-            type="vote")
+            type="class")
 
-predicted.ancestry = p %>%
-  as.data.frame(stringsAsFactors=F) %>%
-  mutate(gsm.id = rownames(.)) %>%
-  inner_join(sample.info)
+predicted.ancestry = data.frame(predicted.ancestry=p, stringsAsFactors=F) %>%
+  mutate(gsm.id = rownames(.)) 
 
-dim(predicted.ancestry)
+save(predicted.ancestry, file="./data/predicted.ancestry.Rdata")
+
+predicted.ancestry %>%
+  filter(!is.na(ancestry)) %>%
+  filter(ancestry %in% c("EUR", "ASN", "AFR")) %>%
+  group_by(series.id) %>%
+  summarize(acc=sum(ancestry == predicted.ancestry)/n())
 
 ## finding appropriate cutoff
 
