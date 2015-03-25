@@ -1,10 +1,7 @@
-library("dplyr")
-library("nlme")
-
 run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL){
   require("dplyr")
-  require("lmer")
   require("tidyr")
+  require("lme4")
   
   liquid_tissues = c("Leukocytes", "Lymphoblasts", "Lymphocytes", "Monocytes",
                      "T-cells", "Whole Blood")
@@ -26,9 +23,17 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL){
     mutate(Probe=factor(Probe)) %>%
     filter(tissue != "Lymphoblasts")
   
-  m = lmer(M ~ age*Probe + tissue_state + ancestry + (1+age+Probe)|tissue + (1+Probe)|gsm.id,
+  contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
+  
+  lc = lmerControl(check.conv.grad     = .makeCC("stop", tol = 1e-3, relTol = NULL),
+                    check.conv.singular = .makeCC(action = "stop",  tol = 1e-4),
+                    check.conv.hess     = .makeCC(action = "stop", tol = 1e-6))
+  
+  m = lmer(M ~ age*Probe + tissue_state + predicted.ancestry + (1+Probe|tissue) + (0 + age|tissue) + (1 + Probe|gsm.id),
           data=data,
           REML=F,
-          verbose=2)
+          verbose=2,
+          control=lc)
   
+  return(m)
 }

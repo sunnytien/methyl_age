@@ -1,9 +1,9 @@
 library("dplyr")
-library("nlme")
+library("lme4")
 library("FDb.InfiniumMethylation.hg19")
 library("IlluminaHumanMethylation450kanno.ilmn12.hg19")
-library("magrittr")
 library("tidyr")
+library("BatchJobs")
 
 load("./data/sample.info.Rdata")
 load("./data/predicted.ancestry.Rdata")
@@ -68,7 +68,6 @@ transcripts = mapping %>%
 ## for all the probes
 ## need to know which gene, which isoform, and position
 
-
 probe.info = hm450 %>%
   as.data.frame %>%
   mutate(Probe=rownames(.)) %>%
@@ -78,3 +77,13 @@ probe.info = hm450 %>%
 
 probe.list = probe.info %>%
   split(., .$nearestGeneSymbol)
+
+reg = makeRegistry("linear_models", packages=c("lme4", "dplyr"))
+
+batchMap(reg, 
+         run.model, 
+         probe.list, 
+         more.args=list(sample.info=sample.info,
+                        predicted.ancestry=predicted.ancestry))
+
+
