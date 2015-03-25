@@ -5,46 +5,12 @@ library("IlluminaHumanMethylation450kanno.ilmn12.hg19")
 library("magrittr")
 library("tidyr")
 
-run.lme = function(probes, gene, beta){
-  
-  blood = c("Leukocytes",
-            "Lymphoblasts",
-            "Monocytes",
-            "T-cells",
-            "Whole Blood")
-  
-  methylation = beta %>%
-    filter(Probe %in% probes) %>%
-    collect %>%
-    gather(gsm.id, beta, -Probe) %>%
-    mutate(M=log(beta / (1-beta)))
-  
-  data = methylation %>%
-    inner_join(sample.info) %>%
-    mutate(ancestry=ifelse(is.na(ancestry),
-                           sample(c("EUR", "AFR", "ASN"), nrow(methylation), replace=T),
-                           ancestry)) %>%
-    inner_join(probe.info) %>%
-    filter(!is.na(M)) %>%
-    filter(!is.na(age)) %>%
-    mutate(gsm.id=factor(gsm.id)) %>%
-    as.data.frame %>%
-    filter(ancestry %in% c("EUR", "AFR", "ASN")) %>%
-    filter(tissue != "Lymphocysts") %>%
-    mutate(tissue_class=ifelse(tissue %in% blood, "liquid", "solid")) %>%
-    mutate(Probe=factor(Probe))
-  
-
-  
-}
-
 load("./data/sample.info.Rdata")
 load("./data/predicted.ancestry.Rdata")
 
 select = dplyr::select
 group_by = dplyr::group_by
 mutate = dplyr::mutate
-
 
 #### FILTERING PROBES ####
 
@@ -102,8 +68,6 @@ transcripts = mapping %>%
 ## for all the probes
 ## need to know which gene, which isoform, and position
 
-probe.list = mapping %>%
-  select(Probe, nearestTranscript, neasertGe)
 
 probe.info = hm450 %>%
   as.data.frame %>%
@@ -112,6 +76,5 @@ probe.info = hm450 %>%
   inner_join(mapping %>% select(Probe, nearestGeneSymbol, nearestTranscript)) %>%
   semi_join(transcripts)
 
-probes = probe.info %>%
-  filter(nearestGeneSymbol=="GRM2") %>%
-  .$Probe
+probe.list = probe.info %>%
+  split(., .$nearestGeneSymbol)
