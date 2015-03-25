@@ -34,36 +34,7 @@ run.lme = function(probes, gene, beta){
     mutate(tissue_class=ifelse(tissue %in% blood, "liquid", "solid")) %>%
     mutate(Probe=factor(Probe))
   
-  contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
-  
-  m.car = lme(M ~ age + tissue_class + ancestry, 
-               data=data,
-               random=list(~1|gsm.id),
-               correlation=corCAR1(0.99, form= ~Position|gsm.id),
-               method="REML")
-  
-  m.lin = lme(M ~ age*Probe, 
-               data=data,
-               random=list(~1|gsm.id, ~age*Probe|tissue_class),
-               method="REML")
-  
-  
-  
-  m.exp = lme(M ~ age + tissue_class + ancestry, 
-              data=data,
-              random=list(~Position|gsm.id),
-              correlation=corLin(form= ~Position|gsm.id),
-              method="REML")
-  
-  m.gaus = lme(M ~ age + tissue_class + ancestry + Probe, 
-               data=data,
-               random=list(~1|gsm.id),
-               correlation=corGaus(form= ~Position|gsm.id),
-               method="REML")
-  
-  m = lme(M ~ age*Probe,
-          random=list(~1|gsm.id, ~age*Probe|ancestry),
-          data=data)
+
   
 }
 
@@ -74,17 +45,39 @@ select = dplyr::select
 group_by = dplyr::group_by
 mutate = dplyr::mutate
 
+
+#### FILTERING PROBES ####
+
+## remove X/Y probes
+chrXY = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Locations %>%
+  as.data.frame %>%
+  mutate(Probe=rownames(.)) %>%
+  filter(chr %in% c("chrX", "chrY"))
+
+## remove multiple matching probes
+multiple_match = read.table("./data/probes_MM.txt", stringsAsFactors=F) %>%
+  select(Probe=V1)
+
+## remove probes with common SNP
+snps = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$SNPs.137CommonSingle %>%
+  as.data.frame  %>%
+  mutate(Probe=rownames(.)) %>%
+  filter(!is.na(Probe_maf)) %>%
+  filter(Probe_maf > 0.05)
+
+## get remaining probes
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
 
 probes = beta %>%
   select(Probe) %>%
   collect() %>%
+  anti_join(chrXY) %>%
+  anti_join(multiple_match) %>%
+  anti_join(snps) %>%
   .$Probe
 
-## remove X/Y probes
-## remove probes with common SNP
-## remove multiple matching probes
+#### MAPPING TO TSS ####
 
 hm450 = get450k()
 
@@ -95,7 +88,7 @@ mapping = getNearestTSS(hm450[probes]) %>%
   filter(distance<=1500)
 
 ## For each gene, choose isoform with the most probes 
-## in TSS
+## Require at least 4 probe sites
 transcripts = mapping %>%
   group_by(nearestTranscript, nearestGeneSymbol) %>%
   summarize(N=n()) %>%
@@ -103,18 +96,20 @@ transcripts = mapping %>%
   group_by(nearestGeneSymbol) %>%
   filter(N==max(N)) %>%
   ungroup %>%
-  filter(N>=5)
+  filter(N>=4)
 
 ## merge all of the relevant information 
 ## for all the probes
 ## need to know which gene, which isoform, and position
 
+probe.list = mapping %>%
+  select(Probe, nearestTranscript, neasertGe)
+
 probe.info = hm450 %>%
   as.data.frame %>%
   mutate(Probe=rownames(.)) %>%
   select(Probe, Chr=seqnames, Position=probeTarget) %>%
-  inner_join(mapping %>%
-               select(Probe, nearestGeneSymbol, nearestTranscript)) %>%
+  inner_join(mapping %>% select(Probe, nearestGeneSymbol, nearestTranscript)) %>%
   semi_join(transcripts)
 
 probes = probe.info %>%
