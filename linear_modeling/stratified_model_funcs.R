@@ -26,11 +26,11 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL){
   contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
   
   lc = lmerControl(check.conv.grad     = .makeCC("stop", tol = 1e-3, relTol = NULL),
-                    check.conv.singular = .makeCC(action = "stop",  tol = 1e-4),
+                    check.conv.singular = .makeCC(action = "ignore",  tol = 1e-4),
                     check.conv.hess     = .makeCC(action = "stop", tol = 1e-6),
                    optCtrl=list(maxfun=4e5))
   
-  m = lmer(M ~ age*Probe + tissue_state + predicted.ancestry + (1|tissue) + (0 + age|tissue) + (0 + Probe|tissue) + (1|gsm.id),
+  m = lmer(M ~ age*Probe + tissue_state + predicted.ancestry + (1|tissue) + (Probe|tissue) + (1|gsm.id),
           data=data,
           REML=F,
           verbose=2,

@@ -78,7 +78,7 @@ probe.info = hm450 %>%
 probe.list = probe.info %>%
   split(., .$nearestGeneSymbol)
 
-reg2 = makeRegistry("linear_models2", packages=c("lme4", "dplyr"))
+reg2 = makeRegistry("linear_models3", packages=c("lme4", "dplyr"))
 
 batchMap(reg2, 
          run.model, 
