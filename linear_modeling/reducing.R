@@ -44,12 +44,14 @@ ncols = sapply(anova.results, ncol)
 anova.results = anova.results[ncols==8] %>%
   do.call(rbind, .)
   
-save(anova.results, file="./data/anova.results.Rdata")
+save(anova.results, file="./Rmd/gene_selection/anova.results.Rdata")
 
 ## process lmer results
 
-files = list.files("./data/models", full.names=T) 
+files = list.files("./data/models", full.names=T)
 
 lmer.results = files %>%
   lapply(process.lmer) %>%
   do.call(rbind, .)
+
+save(lmer.results, file="./Rmd/gene_selection/lmer.results.Rdata")

@@ -28,8 +28,8 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL, save=
     filter(tissue != "Lymphoblasts") 
   
   contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
-  contrasts(data$predicted.ancestry) = contr.sum(length(levels(data$predicted.ancestry)))
   contrasts(data$tissue_state) = contr.sum(length(levels(data$tissue_state)))
+  contrasts(data$predicted.ancestry) = contr.sum(length(levels(data$predicted.ancestry)))
   
   lc = lmerControl(check.conv.grad     = .makeCC("stop", tol = 1e-3, relTol = NULL),
                     check.conv.singular = .makeCC(action = "ignore",  tol = 1e-4),
@@ -40,7 +40,7 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL, save=
           data=data,
           control=lc)
   
-  a = anova(m)
+  a = lmerTest::anova(m, type=3)
   
   if(save){ 
     save(m, file=paste("./data/models/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
