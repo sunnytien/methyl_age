@@ -20,21 +20,26 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL){
     inner_join(sample.info) %>%
     inner_join(predicted.ancestry) %>%
     mutate(tissue_state = tissue %in% liquid_tissues) %>%
-    mutate(Probe=factor(Probe)) %>%
-    filter(tissue != "Lymphoblasts")
+    mutate(Probe=factor(Probe),
+           predicted.ancestry=factor(predicted.ancestry),
+           tissue_state=factor(tissue_state)) %>%
+    filter(tissue != "Lymphoblasts") 
   
   contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
+  contrasts(data$predicted.ancestry) = contr.sum(length(levels(data$predicted.ancestry)))
+  contrasts(data$tissue_state) = contr.sum(length(levels(data$tissue_state)))
   
   lc = lmerControl(check.conv.grad     = .makeCC("stop", tol = 1e-3, relTol = NULL),
                     check.conv.singular = .makeCC(action = "ignore",  tol = 1e-4),
-                    check.conv.hess     = .makeCC(action = "stop", tol = 1e-6),
+                    check.conv.hess     = .makeCC(action = "warning", tol = 1e-6),
                    optCtrl=list(maxfun=4e5))
   
-  m = lmer(M ~ age*Probe + tissue_state + predicted.ancestry + (1|tissue) + (Probe|tissue) + (1|gsm.id),
+  m = lmer(M ~ age*Probe + age*tissue_state + age*predicted.ancestry + (1|tissue) + (1|gsm.id),
           data=data,
           REML=F,
           verbose=2,
           control=lc)
+  
   
   return(m)
 }
