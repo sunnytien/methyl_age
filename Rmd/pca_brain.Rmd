@@ -14,19 +14,20 @@ runtime: shiny
   library("dplyr")
   library("ggvis")
 
-  load("~/Projects/methyl_age/data/pca.Rdata")
-  load("~/Projects/methyl_age/data/sample.info.Rdata")
-  load("~/Projects/methyl_age/data/cerebellar_samples.Rdata")
+#   load("~/Projects/methyl_age/data/pca.Rdata")
+#   load("~/Projects/methyl_age/data/sample.info.Rdata")
+#   load("~/Projects/methyl_age/data/cerebellar_samples.Rdata")
 
-  scores = p.brain %>%
-    scores %>%
-    as.data.frame %>%
-    mutate(gsm.id=rownames(.)) %>%
-    inner_join(sample.info %>%
-                 mutate(series.id=factor(series.id))) %>%
-    mutate(tissue=ifelse(as.character(gsm.id) %in% cerebellar_samples, "Cerebellum", as.character(tissue))) %>%
-    mutate(tissue=factor(tissue))
+#   scores = p.brain %>%
+#     scores %>%
+#     as.data.frame %>%
+#     mutate(gsm.id=rownames(.)) %>%
+#     inner_join(sample.info %>%
+#                  mutate(series.id=factor(series.id))) %>%
+#     mutate(tissue=ifelse(as.character(gsm.id) %in% cerebellar_samples, "Cerebellum", as.character(tissue))) %>%
+#     mutate(tissue=factor(tissue))
 
+load("scores.brain.Rdata")
 ```
 
 

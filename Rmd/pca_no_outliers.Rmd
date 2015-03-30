@@ -10,21 +10,23 @@ runtime: shiny
 ### PCA of GEO data, excluding outliers
 
 ```{r init, include=FALSE}
-  library("pcaMethods")
+  #library("pcaMethods")
   library("dplyr")
   library("ggvis")
+# 
+#   load("~/Projects/methyl_age/data/pca.Rdata")
+#   load("~/Projects/methyl_age/data/sample.info.Rdata")
+# 
+#   scores = p.no.outliers %>%
+#     scores %>%
+#     as.data.frame %>%
+#     mutate(gsm.id=rownames(.)) %>%
+#     inner_join(sample.info %>%
+#                  mutate(series.id=factor(series.id)) %>%
+#                  mutate(gsm.id=as.character(gsm.id)))
+# save(scores, file="scores.no.outliers.Rdata")
 
-  load("~/Projects/methyl_age/data/pca.Rdata")
-  load("~/Projects/methyl_age/data/sample.info.Rdata")
-
-  scores = p.no.outliers %>%
-    scores %>%
-    as.data.frame %>%
-    mutate(gsm.id=rownames(.)) %>%
-    inner_join(sample.info %>%
-                 mutate(series.id=factor(series.id)) %>%
-                 mutate(gsm.id=as.character(gsm.id)))
-
+load("scores.no.outliers.Rdata")
 ```
 
 

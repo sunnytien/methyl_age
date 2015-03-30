@@ -13,12 +13,12 @@ runtime: shiny
   #library("pcaMethods")
   library("dplyr")
   library("ggvis")
+# 
+#   load("~/Projects/methyl_age/data/pca.Rdata")
+#   load("~/Projects/methyl_age/data/sample.info.Rdata")
+#   load("~/Projects/methyl_age/data/cerebellar_samples.Rdata")
 
-  #load("~/Projects/methyl_age/data/pca.Rdata")
-  #load("~/Projects/methyl_age/data/sample.info.Rdata")
-  #load("~/Projects/methyl_age/data/cerebellar_samples.Rdata")
-
-load("scores.no.outliers.Rdata")
+load("scores.no.lymphoblasts.Rdata")
 
 #   scores = p.no.lymphoblasts %>%
 #     scores %>%
@@ -28,6 +28,7 @@ load("scores.no.outliers.Rdata")
 #                  mutate(series.id=factor(series.id))) %>%
 #     mutate(tissue=ifelse(as.character(gsm.id) %in% cerebellar_samples, "Cerebellum", as.character(tissue))) %>%
 #     mutate(tissue=factor(tissue))
+
 
 ```
 
@@ -49,8 +50,7 @@ lb = linked_brush(keys=scores$id, fill="grey")
 scores %>%
   ggvis(~PC1, ~PC2, fill=~tissue, key := ~id, fill.brush:="black") %>%
   layer_points() %>%
-  lb$input() %>%
-  add_tooltip(all_values)
+  lb$input() 
 
 selected = lb$selected
 scores.selected = reactive({
