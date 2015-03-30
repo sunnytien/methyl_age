@@ -23,22 +23,27 @@ process.lmer = function(x){
   
   m = get(load(x))
   
-  data.frame(gene=gene,
-             variable=names(fixef(m)),
-             coef=fixef(m))
+  df = data.frame(gene=gene,
+                  variable=names(fixef(m)),
+                  coef=fixef(m))
 }
 
 library("lme4")
 library("lmerTest")
+library("dplyr")
 
 ## process anova results
 
 files = list.files("./data/anovas", full.names=T)
 
 anova.results = files %>%
-  lapply(process.anova) %>%
-  do.call(rbind, .)
+  lapply(process.anova) 
 
+ncols = sapply(anova.results, ncol)
+
+anova.results = anova.results[ncols==8] %>%
+  do.call(rbind, .)
+  
 save(anova.results, file="./data/anova.results.Rdata")
 
 ## process lmer results

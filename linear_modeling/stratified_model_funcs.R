@@ -1,4 +1,5 @@
 run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL, save=F){
+  
   require("dplyr")
   require("tidyr")
   require("lme4")

@@ -130,6 +130,7 @@ predicted.ancestry = data.frame(predicted.ancestry=p,
 
 save(predicted.ancestry, file="./data/predicted.ancestry.Rdata")
 
+
 ## evalution 
 
 acc = predicted.ancestry %>%
@@ -137,3 +138,29 @@ acc = predicted.ancestry %>%
   filter(ancestry %in% c("EUR", "AFR", "ASN")) %>%
   group_by(series.id) %>%
   summarize(acc=sum(ancestry == predicted.ancestry) / n())
+
+peds = predicted.ancestry %>%
+  filter(series.id=="GSE50759") %>%
+  filter(!is.na(ancestry))
+
+table(peds$ancestry, peds$predicted.ancestry)
+
+predicted.ancestry %>%
+  inner_join(sample.info) %>%
+  filter(series.id %in% acc$series.id) %>%
+  group_by(series.id, tissue) %>%
+  summarize
+
+leuko = predicted.ancestry %>%
+  filter(series.id == "GSE36064") %>%
+  filter(!is.na(ancestry)) %>%
+  filter(ancestry %in% unique(predicted.ancestry$predicted.ancestry))
+
+counts = predicted.ancestry %>%
+  inner_join(sample.info %>%
+               select(gsm.id, tissue)) %>%
+  filter(tissue!="Lymphocytes") %>%
+  group_by(tissue, predicted.ancestry) %>%
+  summarize(N=n()) %>%
+  spread(predicted.ancestry, N, fill=0) %>%
+  arrange(tissue)
