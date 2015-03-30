@@ -1,7 +1,8 @@
-run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL){
+run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL, save=F){
   require("dplyr")
   require("tidyr")
   require("lme4")
+  require("lmerTest")
   
   liquid_tissues = c("Leukocytes", "Lymphoblasts", "Lymphocytes", "Monocytes",
                      "T-cells", "Whole Blood")
@@ -19,7 +20,7 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL){
   data = beta.thin %>%
     inner_join(sample.info) %>%
     inner_join(predicted.ancestry) %>%
-    mutate(tissue_state = tissue %in% liquid_tissues) %>%
+    mutate(tissue_state = ifelse(tissue %in% liquid_tissues, "Liquid", "Solid")) %>%
     mutate(Probe=factor(Probe),
            predicted.ancestry=factor(predicted.ancestry),
            tissue_state=factor(tissue_state)) %>%
@@ -34,12 +35,20 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL){
                     check.conv.hess     = .makeCC(action = "warning", tol = 1e-6),
                    optCtrl=list(maxfun=4e5))
   
-  m = lmer(M ~ age*Probe + age*tissue_state + age*predicted.ancestry + (1|tissue) + (1|gsm.id),
+  m = lmer(M ~ age.normed*Probe + age.normed*tissue_state + age.normed*predicted.ancestry + (1 | tissue) + (0 + age|tissue) + (1|gsm.id),
           data=data,
-          REML=F,
-          verbose=2,
           control=lc)
   
+  a = anova(m)
   
-  return(m)
+  if(save){ 
+    save(m, file=paste("./data/models/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
+    save(a, file=paste("./data/anovas/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
+    rm(a)
+    rm(m)
+    rm(data)
+    rm(beta.thing)
+    rm(beta)
+    return(T)
+  } else return(list(model=m, anova=a))
 }

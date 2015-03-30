@@ -4,6 +4,11 @@ library("FDb.InfiniumMethylation.hg19")
 library("IlluminaHumanMethylation450kanno.ilmn12.hg19")
 library("tidyr")
 library("BatchJobs")
+library("magrittr")
+library("car")
+library("doParallel")
+
+source("./linear_modeling//stratified_model_funcs.R")
 
 load("./data/sample.info.Rdata")
 load("./data/predicted.ancestry.Rdata")
@@ -11,6 +16,15 @@ load("./data/predicted.ancestry.Rdata")
 select = dplyr::select
 group_by = dplyr::group_by
 mutate = dplyr::mutate
+llply = plyr::llply
+
+#### RUNNING YJ NORMALIZATION ####
+
+yj = powerTransform(sample.info$age, family="yjPower")
+
+sample.info %<>% 
+  mutate(age.normed=yjPower(age, coef(yj))) %>%
+  mutate(age.normed=scale(age.normed, center=F))
 
 #### FILTERING PROBES ####
 
@@ -78,13 +92,11 @@ probe.info = hm450 %>%
 probe.list = probe.info %>%
   split(., .$nearestGeneSymbol)
 
-reg = makeRegistry("linear_models3", packages=c("lme4", "dplyr"))
+registerDoParallel(10)
 
-batchMap(reg, 
-         run.model, 
-         probe.list, 
-         more.args=list(sample.info=sample.info,
-                        predicted.ancestry=predicted.ancestry))
-submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=100))
-
-
+models = llply(probe.list, 
+               run.model, 
+               sample.info, 
+               predicted.ancestry, 
+               save=T,
+               .parallel=T)
