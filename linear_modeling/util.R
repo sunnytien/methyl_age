@@ -8,16 +8,13 @@ library("magrittr")
 library("car")
 library("doParallel")
 
+select = dplyr::select
+group_by = dplyr::group_by
+mutate = dplyr::mutate
+llply = plyr::llply
+
 get.probe.infos = function(){
-  
-  select = dplyr::select
-  group_by = dplyr::group_by
-  mutate = dplyr::mutate
-  llply = plyr::llply
-  
-  sample.info %<>% 
-    mutate(age.normed=yjPower(age, coef(yj))) %>%
-    mutate(age.normed=scale(age.normed, center=F)[,1])
+
   
   #### FILTERING PROBES ####
   
@@ -79,7 +76,8 @@ get.probe.infos = function(){
     as.data.frame %>%
     mutate(Probe=rownames(.)) %>%
     select(Probe, Chr=seqnames, Position=probeTarget) %>%
-    inner_join(mapping %>% select(Probe, nearestGeneSymbol, nearestTranscript)) %>%
+    inner_join(mapping %>% 
+                 select(Probe, nearestGeneSymbol, nearestTranscript, distance)) %>%
     semi_join(transcripts)
   
   probe.list = probe.info %>%
@@ -92,6 +90,11 @@ get.model.data = function(probe.info){
   
   load("./data/sample.info.Rdata")
   load("./data/predicted.ancestry.Rdata")
+  
+  sample.info %<>% 
+    mutate(age.normed=ifelse(age<20,
+                             log((age+1)/21) + 1,
+                             (age+1)/21))
   
   liquid_tissues = c("Leukocytes", "Lymphoblasts", "Lymphocytes", "Monocytes",
                      "T-cells", "Whole Blood")
@@ -107,6 +110,7 @@ get.model.data = function(probe.info){
     mutate(M=log(beta/(1-beta))) 
   
   data = beta.thin %>%
+    inner_join(probe.info) %>%
     inner_join(sample.info) %>%
     inner_join(predicted.ancestry %>%
                  select(gsm.id, predicted.ancestry)) %>%
