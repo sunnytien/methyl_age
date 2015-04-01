@@ -38,7 +38,7 @@ get.probe.infos = function(){
     filter(Probe_maf > 0.05)
   
   ## get remaining probes
-  db = src_sqlite("./data/BMIQ.db")
+  db = src_sqlite(get.db.file("./data/BMIQ.db"))
   beta = tbl(db, "BMIQ")
   
   probes = beta %>%
@@ -127,7 +127,12 @@ get.model.data = function(probe.info){
 
 get.db.file = function(db.file){
   db.tmp = paste(Sys.getenv("TMP"), "/db", sep="")
-  if(!file.exists(db.tmp)) file.copy(db.file, db.tmp)
+  if(!file.exists(db.tmp)){ 
+    cat(paste("Copying data base to", db.tmp, "\n"))
+    file.copy(db.file, db.tmp)
+  } else {
+    cat(paste("Database found at", db.tmp, "\n"))
+  }
   return(db.tmp)
 }
 

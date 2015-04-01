@@ -3,9 +3,11 @@ source("./linear_modeling/util.R")
 
 probe.infos = get.probe.infos()
 
-registerDoParallel(10)
+reg = makeRegistry("models", src.files=c("./linear_modeling/util.R",
+                                         "./linear_modeling/stratified_model_funcs.R"))
 
-models = llply(probe.infos, 
-               run.model,  
-               save=T,
-               .parallel=T)
+batchMap(reg, run.model, probe.infos)
+submitJobs(reg, 1)
+
+submitJobs(reg, chunk(findNotSubmitted(reg),
+                      n.chunks=150))
