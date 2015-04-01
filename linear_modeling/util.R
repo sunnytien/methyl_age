@@ -38,7 +38,7 @@ get.probe.infos = function(){
     filter(Probe_maf > 0.05)
   
   ## get remaining probes
-  db = src_sqlite(get.db.file("./data/BMIQ.db"))
+  db = src_sqlite("./data/BMIQ.db")
   beta = tbl(db, "BMIQ")
   
   probes = beta %>%
