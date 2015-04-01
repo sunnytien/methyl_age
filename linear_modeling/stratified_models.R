@@ -24,7 +24,7 @@ yj = powerTransform(sample.info$age, family="yjPower")
 
 sample.info %<>% 
   mutate(age.normed=yjPower(age, coef(yj))) %>%
-  mutate(age.normed=scale(age.normed, center=F))
+  mutate(age.normed=scale(age.normed, center=F)[,1])
 
 #### FILTERING PROBES ####
 

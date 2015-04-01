@@ -20,7 +20,8 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL, save=
   
   data = beta.thin %>%
     inner_join(sample.info) %>%
-    inner_join(predicted.ancestry) %>%
+    inner_join(predicted.ancestry %>%
+                 select(gsm.id, predicted.ancestry)) %>%
     mutate(tissue_state = ifelse(tissue %in% liquid_tissues, "Liquid", "Solid")) %>%
     mutate(Probe=factor(Probe),
            predicted.ancestry=factor(predicted.ancestry),
@@ -36,7 +37,7 @@ run.model = function(probe.info, sample.info, predicted.ancestry, db=NULL, save=
                     check.conv.hess     = .makeCC(action = "warning", tol = 1e-6),
                    optCtrl=list(maxfun=4e5))
   
-  m = lmer(M ~ age.normed*Probe + age.normed*tissue_state + age.normed*predicted.ancestry + (1 | tissue) + (0 + age|tissue) + (1|gsm.id),
+  m = lmer(M ~ age*Probe + tissue_state + predicted.ancestry + (1|gsm.id) + (age|tissue),
           data=data,
           control=lc)
   
