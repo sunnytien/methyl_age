@@ -8,6 +8,8 @@ library("magrittr")
 library("car")
 library("doParallel")
 
+DB_LOCATION <<- NULL
+
 select = dplyr::select
 group_by = dplyr::group_by
 mutate = dplyr::mutate
@@ -99,7 +101,7 @@ get.model.data = function(probe.info){
   liquid_tissues = c("Leukocytes", "Lymphoblasts", "Lymphocytes", "Monocytes",
                      "T-cells", "Whole Blood")
   
-  db = src_sqlite("./data/BMIQ.db")
+  db = src_sqlite(get.db.file("./data/BMIQ.db"))
   
   beta = tbl(db, "BMIQ") %>%
     filter(Probe %in% probe.info$Probe) %>%
@@ -122,3 +124,12 @@ get.model.data = function(probe.info){
   
   return(data)
 }
+
+get.db.file = function(db.file){
+  db.tmp = paste(Sys.getenv("TMP"), "/db", sep="")
+  if(!file.exists(db.tmp)) file.copy(db.file, db.tmp)
+  return(db.tmp)
+}
+
+
+
