@@ -1,0 +1,86 @@
+---
+title: "Linear Model Analysis"
+output: 
+  html_document:
+    fig_width: 10
+    fig_height: 5
+runtime: shiny
+---
+
+
+```{r init, include=FALSE}
+
+library("dplyr")
+library("ggvis")
+library("magrittr")
+
+load("lmer.results.Rdata")
+load("anova.results.Rdata")
+
+lmer.results %<>% 
+  mutate(variable=gsub("[0-9]+", "", as.character(variable)))
+
+all_values <- function(x) {
+  if(is.null(x)) return(NULL)
+  paste0(names(x), ": ", format(x), collapse = "<br />")
+}
+
+age = inner_join(lmer.results, anova.results) %>%
+  filter(variable=="age.normed") %>%
+  mutate(logP=-log10(`Pr(>F)`)) %>%
+  filter(!is.na(logP)) %>%
+  mutate(id=1:nrow(.))
+
+tissue = inner_join(lmer.results, anova.results) %>%
+  filter(variable=="tissue_state") %>%
+  filter(!is.nan(`Pr(>F)`)) %>%
+  mutate(logP=-log10(`Pr(>F)`)) %>%
+  filter(logP < Inf) %>%
+  filter(!is.na(logP)) %>%
+  mutate(id=1:nrow(.))
+
+ancestry = inner_join(lmer.results, anova.results) %>%
+  filter(variable=="predicted.ancestry") %>%
+  filter(!is.nan(`Pr(>F)`)) %>%
+  mutate(logP=-log10(`Pr(>F)`)) %>%
+  filter(logP < Inf) %>%
+  filter(!is.na(logP)) %>%
+  mutate(id=1:nrow(.))
+
+```
+
+## Volcano Plot for Age
+
+```{r age, echo=F}
+
+age %>%
+  ggvis(~coef, ~logP, key := ~gene) %>%
+  add_axis("y", title="-log P-value") %>%
+  add_axis("x", title="Normalized Coefficient") %>%
+  add_tooltip(all_values)
+
+```
+
+## Volcano Plot for Tissue
+
+```{r tissue, echo=F}
+
+tissue %>%
+  ggvis(~coef, ~logP, key := ~gene) %>%
+  add_axis("y", title="-log P-value") %>%
+  add_axis("x", title="Normalized Coefficient") %>%
+  add_tooltip(all_values)
+
+```
+
+## Volcano Plot for Ancestry
+
+```{r ancestry, echo=F}
+
+ancestry %>%
+  ggvis(~coef, ~logP, key := ~gene) %>%
+  add_axis("y", title="-log P-value") %>%
+  add_axis("x", title="Normalized Coefficient") %>%
+  add_tooltip(all_values)
+
+```
