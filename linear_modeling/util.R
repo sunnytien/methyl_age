@@ -7,8 +7,8 @@ library("BatchJobs")
 library("magrittr")
 library("car")
 library("doParallel")
+library("data.table")
 
-DB_LOCATION <<- NULL
 
 select = dplyr::select
 group_by = dplyr::group_by
@@ -136,5 +136,10 @@ get.db.file = function(db.file){
   return(db.tmp)
 }
 
+write.probe.info = function(){
+  probe.infos = get.probe.infos()
+  probe.info = rbindlist(probe.infos)
+  save(probe.info, file="./data/probe.info.Rdata")
+}
 
 
