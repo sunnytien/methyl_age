@@ -95,7 +95,7 @@ get.model.data = function(probe.info){
   
   sample.info %<>% 
     mutate(age.normed=ifelse(age<20,
-                             log((age+1)/21) + 1,
+                             log10((age+1)/21) + 1,
                              (age+1)/21))
   
   liquid_tissues = c("Leukocytes", "Lymphoblasts", "Lymphocytes", "Monocytes",

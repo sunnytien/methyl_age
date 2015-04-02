@@ -1,11 +1,9 @@
-run.model = function(probe.info, save=F){
+run.model = function(data, save=T){
   
   require("dplyr")
   require("tidyr")
   require("lme4")
   require("lmerTest")
-  
-  data = get.model.data(probe.info)
   
   contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
   contrasts(data$tissue_state) = contr.sum(length(levels(data$tissue_state)))

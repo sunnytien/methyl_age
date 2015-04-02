@@ -3,11 +3,16 @@ source("./linear_modeling/util.R")
 
 probe.infos = get.probe.infos()
 
-reg = makeRegistry("models", src.files=c("./linear_modeling/util.R",
+data.reg = makeRegistry("model_data", src.files=c("./linear_modeling/util.R",
                                          "./linear_modeling/stratified_model_funcs.R"))
 
-batchMap(reg, run.model, probe.infos)
-submitJobs(reg, 1)
+batchMap(data.reg, get.model.data, probe.infos)
+submitJobs(data.reg, 1)
+submitJobs(data.reg, chunk(findNotSubmitted(data.reg),
+                      n.chunks=100))
 
-submitJobs(reg, chunk(findNotSubmitted(reg),
-                      n.chunks=150))
+model.reg = makeRegistry("models", src.files=c("./linear_modeling/util.R",
+                                                "./linear_modeling/stratified_model_funcs.R"))
+batchMapResults(data.reg, model.reg, 
+                run.model,
+                save=T)
