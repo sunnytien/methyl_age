@@ -22,8 +22,8 @@ run.model = function(data, save=T){
   co = coef(summary(m))
   
   if(save){ 
-    save(co, file=paste("./data/models/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
-    save(a, file=paste("./data/anovas/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
+    save(co, file=paste("./data/models/", data$nearestGeneSymbol[1], ".Rdata", sep=""))
+    save(a, file=paste("./data/anovas/", data$nearestGeneSymbol[1], ".Rdata", sep=""))
     rm(a)
     rm(m)
     rm(data)
