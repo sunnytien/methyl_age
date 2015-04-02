@@ -13,10 +13,10 @@ library("data.table")
 select = dplyr::select
 group_by = dplyr::group_by
 mutate = dplyr::mutate
+summarize = dplyr::summarize
 llply = plyr::llply
 
 get.probe.infos = function(){
-
   
   #### FILTERING PROBES ####
   
@@ -126,14 +126,16 @@ get.model.data = function(probe.info){
 }
 
 get.db.file = function(db.file){
-  db.tmp = paste(Sys.getenv("TMP"), "/db", sep="")
-  if(!file.exists(db.tmp)){ 
-    cat(paste("Copying data base to", db.tmp, "\n"))
-    file.copy(db.file, db.tmp)
-  } else {
-    cat(paste("Database found at", db.tmp, "\n"))
-  }
-  return(db.tmp)
+  if(Sys.getenv("TMP") != ""){
+    db.tmp = paste(Sys.getenv("TMP"), "/db", sep="")
+    if(!file.exists(db.tmp)){ 
+      cat(paste("Copying data base to", db.tmp, "\n"))
+      file.copy(db.file, db.tmp)
+    } else {
+      cat(paste("Database found at", db.tmp, "\n"))
+    }
+    return(db.tmp)
+  } else return(db.file)
 }
 
 write.probe.info = function(){

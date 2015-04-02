@@ -19,8 +19,10 @@ run.model = function(data, save=T){
   
   a = lmerTest::anova(m, type=3)
   
+  co = coef(summary(m))
+  
   if(save){ 
-    save(m, file=paste("./data/models/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
+    save(co, file=paste("./data/models/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
     save(a, file=paste("./data/anovas/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
     rm(a)
     rm(m)
