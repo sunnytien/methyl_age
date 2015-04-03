@@ -8,11 +8,13 @@ library("doParallel")
 library("purrr")
 library("tidyr")
 library("data.table")
+library("car")
 
 source("./model_building/get_params.R")
 source("./model_building/util.R")
 
 age.trans = function(x) sapply(x, function(y) if(y < 20) log10((y + 1)/21) + 1 else (y+1)/21)
+#age.trans = function(x) yjPower(x, coef(yj))
 
 load("./data/sample.info.Rdata")
 load("./data/probe.info.Rdata")
@@ -23,6 +25,8 @@ group_by = dplyr::group_by
 mutate = dplyr::mutate
 
 ### DATA PREPARATION ###
+
+yj = powerTransform(sample.info$age, family="yjPower")
 
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
@@ -45,11 +49,11 @@ data = sample.info %>%
   inner_join(b.tmp)
 
 data1 = data %>%
-  sample_frac(0.8)
+  sample_n(100)
 
 data2 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
-  sample_frac(0.5)
+  sample_n(100)
 
 data3 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
@@ -86,8 +90,8 @@ model.names = c("pcr",
 
 models = plyr::llply(model.names,
                      train.wrapper.safe,
-                     x,       
-                     y,
+                     x1,       
+                     y1,
                      trControl=ctrl,
                      .progress="text")
 
@@ -128,4 +132,34 @@ y3.pred = predict(ensemble,
                   newx=as.matrix(z3),
                   s="lambda.min")
 
-plot(cor(z3))
+plot(cor(z3, y3, method="spearman"))
+
+y3.pred = matrix(y3.pred, ncol=1)
+colnames(y3.pred) = "ensemble"
+
+
+cols = c(ppr="red",
+         svmLinear="green",
+         pls="red",
+         rvmLinear="green",
+         gbm="blue",
+         rvmRadial="green",
+         pcr="red",
+         svmRadialCost="green",
+         gaussprRadial="green",
+         rf="blue",
+         ensemble="black",
+         cubist="blue")
+
+perf = cor(cbind(z3, y3.pred), y3) %>%
+  as.data.frame %>%
+  mutate(method=row.names(.)) %>%
+  mutate(cor=V1) %>%
+  mutate(col=cols[method]) %>%
+  arrange(col, cor)
+
+barplot(perf$cor,
+        col=perf$col,
+        names.arg=perf$method,
+        las=2,
+        ylab="Correlation between Age and DNAm Age")

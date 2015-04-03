@@ -6,6 +6,7 @@ library("ggvis")
 
 load("./data/sample.info.Rdata")
 load("./data/rf.Rdata")
+load("./data/predicted.ancestry.Rdata")
 
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")

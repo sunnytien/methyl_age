@@ -14,3 +14,10 @@ run.models2 = function(data.file){
 
 model.data.files = list.files("./data/model_data", full.names=T) %>%
   grep(".Rdata$", ., value=T)
+
+reg = makeRegistry("models", src.files=c("./linear_modeling/util.R",
+                                          "./linear_modeling/stratified_model_funcs.R"))
+
+batchMap(reg, run.models2, model.data.files)
+
+submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=150))
