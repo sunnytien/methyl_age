@@ -71,10 +71,11 @@ b.p.imp.scores = b.p.imp %>%
   mutate(gsm.id=rownames(.)) %>%
   inner_join(sample.info) %>%
   inner_join(predicted.ancestry %>%
-               select(gsm.id, predicted.ancestry))
+               select(gsm.id, predicted.ancestry)) %>%
+  mutate(ancestry=factor(ancestry)) %>%
+  mutate(pred.ances=factor(predicted.ancestry,
+                                   levels=levels(ancestry)))
 
-plot(b.p.imp.scores$PC1,
-     col=factor(b.p.imp.scores$ancestry))
 
 pdf("./figures/ancestry.pdf")
 
@@ -93,7 +94,7 @@ b.p.imp.scores %>%
   layer_points(fill=~ancestry, opacity:=1)
 
 b.p.imp.scores %>%
-  ggvis(~PC1, ~PC2, fill:="grey", opacity:=0.2) %>%
+  ggvis(~PC1, ~PC2, fill:="grey", opacity:=0) %>%
   layer_points() %>%
   add_data(b.p.imp.scores %>%
              filter(!is.na(ancestry)) %>%
@@ -102,13 +103,13 @@ b.p.imp.scores %>%
   layer_points(fill=~ancestry, opacity:=1)
 
 b.p.imp.scores %>%
-  ggvis(~PC1, ~PC2, fill:="grey", opacity:=0.2) %>%
+  ggvis(~PC1, ~PC2, fill:="grey", opacity:=0) %>%
   layer_points() %>%
   add_data(b.p.imp.scores %>%
              filter(!is.na(ancestry)) %>%
              filter(!is.na(age)) %>%
              filter(age < 18)) %>%
-  layer_points(fill=~predicted.ancestry, opacity:=1)
+  layer_points(fill=~pred.ances, opacity:=1)
 
 dev.off()
 

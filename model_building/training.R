@@ -158,6 +158,7 @@ perf = cor(cbind(z3, y3.pred), y3) %>%
   mutate(col=cols[method]) %>%
   arrange(col, cor)
 
+par(mar=c(7.1,5.1,2.1,2.1))
 barplot(perf$cor,
         col=perf$col,
         names.arg=perf$method,
