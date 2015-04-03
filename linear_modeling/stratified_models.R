@@ -1,21 +1,16 @@
 source("./linear_modeling/stratified_model_funcs.R")
 source("./linear_modeling/util.R")
 
-probe.infos = get.probe.infos()
+write.model.data = function(probe.info){
+  data = get.model.data(probe.info)
+  save(data, 
+       file=paste("./data/model_data/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
+}
 
-data.reg = makeRegistry("model_data", src.files=c("./linear_modeling/util.R",
-                                         "./linear_modeling/stratified_model_funcs.R"))
+run.models2 = function(data.file){
+  load(data.file)
+  run.model(data)
+}
 
-batchMap(data.reg, get.model.data, probe.infos)
-submitJobs(data.reg, 1)
-submitJobs(data.reg, 
-           chunk(findNotSubmitted(data.reg),n.chunks=100))
-
-model.reg = makeRegistry("models", src.files=c("./linear_modeling/util.R",
-                                                "./linear_modeling/stratified_model_funcs.R"))
-batchMapResults(data.reg, 
-                model.reg, 
-                run.model,
-                save=T)
-submitJobs(model.reg, 
-           chunk(findNotSubmitted(model.reg),n.chunks=100))
+model.data.files = list.files("./data/model_data", full.names=T) %>%
+  grep(".Rdata$", ., value=T)

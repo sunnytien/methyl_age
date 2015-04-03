@@ -12,23 +12,24 @@ run.model = function(data, save=T){
                     check.conv.singular = .makeCC(action = "ignore",  tol = 1e-4),
                     check.conv.hess     = .makeCC(action = "warning", tol = 1e-6),
                    optCtrl=list(maxfun=4e5))
-  
+  cat("Training model\n")
   m = lmer(M ~ age.normed*Probe + tissue_state + predicted.ancestry + (1|gsm.id) + (age|tissue),
           data=data,
           control=lc)
   
+  cat("Running anova\n")
   a = lmerTest::anova(m, type=3)
   
+  cat("Getting Coefficients\n")
   co = coef(summary(m))
   
   if(save){ 
+    cat("Saving\n")
     save(co, file=paste("./data/models/", data$nearestGeneSymbol[1], ".Rdata", sep=""))
     save(a, file=paste("./data/anovas/", data$nearestGeneSymbol[1], ".Rdata", sep=""))
     rm(a)
     rm(m)
     rm(data)
-    rm(beta.thing)
-    rm(beta)
     return(T)
   } else return(list(model=m, anova=a))
 }
