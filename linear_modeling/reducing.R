@@ -1,3 +1,5 @@
+library("data.table")
+
 ### this script loads the results of the anova 
 ### and turns it into a single data.frame for
 ### graphical display by Rmd files
@@ -16,16 +18,19 @@ process.anova = function(x){
   return(df)
 }
 
-process.lmer = function(x){
+process.summary = function(x){
   
   gene = gsub("./data/models/", "", x) %>%
     gsub(".Rdata", "", .)
   
   m = get(load(x))
   
-  df = data.frame(gene=gene,
-                  variable=names(fixef(m)),
-                  coef=fixef(m))
+  df = m %>% 
+    as.data.frame %>%
+    mutate(variable=rownames(.)) %>%
+    mutate(gene=gene)
+  
+  return(df)
 }
 
 library("lme4")
@@ -34,24 +39,37 @@ library("dplyr")
 
 ## process anova results
 
-files = list.files("./data/anovas", full.names=T)
+anova.files = list.files("./data/anovas", full.names=T)
 
-anova.results = files %>%
+anova.results = anova.files %>%
   lapply(process.anova) 
 
 ncols = sapply(anova.results, ncol)
 
-anova.results = anova.results[ncols==8] %>%
-  do.call(rbind, .)
-  
+anova.result = anova.results[ncols == 8] %>%
+  rbindlist
+
 save(anova.results, file="./Rmd/gene_selection/anova.results.Rdata")
 
 ## process lmer results
 
-files = list.files("./data/models", full.names=T)
+summary.files = list.files("./data/models", full.names=T)
 
-lmer.results = files %>%
-  lapply(process.lmer) %>%
-  do.call(rbind, .)
+summary.results = files %>%
+  lapply(process.summary)
+
+ncols = sapply(summary.results, ncol)
+
+summary.result = summary.results[ncols==7] %>%
+  rbindlist
 
 save(lmer.results, file="./Rmd/gene_selection/lmer.results.Rdata")
+
+age = summary.result %>%
+  filter(variable=="age.normed")
+
+age.est = age$Estimate
+names(age.est) = age$gene
+
+pop.est = pop$Estimate
+names(pop.est) = pop$gene
