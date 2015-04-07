@@ -3,6 +3,8 @@ library("data.table")
 library("IlluminaHumanMethylation450kanno.ilmn12.hg19")
 library("tidyr")
 library("randomForest")
+library("magrittr")
+library("glmnet")
 
 fst = fread("./data/FstGLOB_CEU_u_YRI_u_CHB.whole_genome.pvalues") %>%
   filter(pvalue < 0.05)
@@ -22,14 +24,16 @@ load("./data/sample.info.Rdata")
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
 
+names(aimms) = NULL
+
 probes = beta %>%
   filter(Probe %in% aimms) %>%
   collect
 
 data = probes %>%
   gather(gsm.id, beta, starts_with("GSM")) %>%
-  inner_join(sample.info %>% select(gsm.id, ancestry, tissue)) %>%
-  spread(Probe, beta)
+  spread(Probe, beta) %>% 
+  inner_join(sample.info %>% select(gsm.id, ancestry, tissue))
 
 ## training rf
 
@@ -45,4 +49,24 @@ x = training %>%
 y = training$ancestry %>%
   factor
 
-rf = randomForest(x, y, ntree=2000)
+m = cv.glmnet(x, y, 
+              family="multinomial",
+              alpha=0.5)
+
+## testing rf
+
+testing = data %>%
+  filter(!is.na(ancestry)) %>%
+  filter(ancestry %in% c("ASN", "AFR", "EUR"))
+
+x = testing %>%
+  select(starts_with("cg")) %>%
+  as.matrix
+
+y = testing$ancestry
+
+p = predict(m, newx=x, s="lambda.min") 
+
+table(y, p[,1])
+plot(m)
+help(predict.cv.glmnet)
