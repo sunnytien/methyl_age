@@ -32,7 +32,7 @@ db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
 
 probes = probe.info %>%
-  filter(as.character(nearestGeneSymbol) %in% c("ELOVL2-AS1", "DDO", "ABHD14B", "LDHD", "BSX", "CD248"))
+  filter(as.character(nearestGeneSymbol) %in% c(head(age$gene,5), tail(age$gene,5)))
 
 b.tmp = beta %>%
   filter(Probe %in% probes$Probe) %>%
