@@ -1,5 +1,7 @@
 library("data.table")
 
+source("~/Projects/GSEA/R/gsea.R")
+
 ### this script loads the results of the anova 
 ### and turns it into a single data.frame for
 ### graphical display by Rmd files
@@ -55,7 +57,7 @@ save(anova.results, file="./Rmd/gene_selection/anova.results.Rdata")
 
 summary.files = list.files("./data/models", full.names=T)
 
-summary.results = files %>%
+summary.results = summary.files %>%
   lapply(process.summary)
 
 ncols = sapply(summary.results, ncol)
@@ -63,13 +65,40 @@ ncols = sapply(summary.results, ncol)
 summary.result = summary.results[ncols==7] %>%
   rbindlist
 
-save(lmer.results, file="./Rmd/gene_selection/lmer.results.Rdata")
-
 age = summary.result %>%
   filter(variable=="age.normed")
 
 age.est = age$Estimate
 names(age.est) = age$gene
 
-pop.est = pop$Estimate
+age.gsea = gsea(age.est, gmt="ReactomePathways.gmt")
+save(age.gsea, file="./data/age.gsea.Rdata")
+
+
+tissue = summary.result %>%
+  filter(variable=="tissue_state1")
+
+tissue.est = tissue$Estimate
+names(tissue.est) = tissue$gene
+
+tissue.gsea = gsea(tissue.est, gmt="ReactomePathways.gmt")
+
+
+pop = anova.result %>%
+  filter(variable=="predicted.ancestry")
+
+pop.est = pop$`F.value`
 names(pop.est) = pop$gene
+pop.gsea = gsea(pop.est, gmt="ReactomePathways.gmt")
+
+asn = summary.result %>%
+  filter(variable=="predicted.ancestryASN")
+asn.est = asn$Estimate
+names(asn.est) = asn$gene
+asn.gsea = gsea(asn.est, gmt="ReactomePathways.gmt")
+
+afr = summary.result %>%
+  filter(variable=="predicted.ancestryEUR")
+afr.est = afr$Estimate
+names(afr.est) = afr$gene
+afr.gsea = gsea(afr.est, gmt="ReactomePathways.gmt")

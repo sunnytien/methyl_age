@@ -32,7 +32,7 @@ db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
 
 probes = probe.info %>%
-  filter(as.character(nearestGeneSymbol) %in% c("GRM2", "DDO", "KCNAB3"))
+  filter(as.character(nearestGeneSymbol) %in% c("ELOVL2-AS1", "DDO", "ABHD14B", "LDHD", "BSX", "CD248"))
 
 b.tmp = beta %>%
   filter(Probe %in% probes$Probe) %>%
@@ -49,11 +49,11 @@ data = sample.info %>%
   inner_join(b.tmp)
 
 data1 = data %>%
-  sample_n(100)
+  sample_n(3000)
 
 data2 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
-  sample_n(100)
+  sample_n(1000)
 
 data3 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%

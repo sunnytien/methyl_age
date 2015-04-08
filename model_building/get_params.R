@@ -58,7 +58,7 @@ get.params.cubist = function(...){
                       committees=c(1,100)))
 }
 get.params.gbm = function(...){
-  return(expand.grid(n.trees=c(100,1000,10000,100000),
+  return(expand.grid(n.trees=c(100,1000,10000),
                     interaction.depth=1:3,
                     shrinkage=0.001))
 }
