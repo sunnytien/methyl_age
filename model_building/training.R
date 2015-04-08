@@ -15,6 +15,8 @@ source("./model_building/util.R")
 
 age.trans = function(x) sapply(x, function(y) if(y < 20) log10((y + 1)/21) + 1 else (y+1)/21)
 #age.trans = function(x) yjPower(x, coef(yj))
+#age.trans = function(x) log((x+1)/21) + (x+1)/21
+#age.antitrans = function(x) 21 * lambert_W0(exp(21*x + 1)^(1/21)) - 1
 
 load("./data/sample.info.Rdata")
 load("./data/probe.info.Rdata")
@@ -27,7 +29,7 @@ mutate = dplyr::mutate
 
 ### DATA PREPARATION ###
 
-#yj = powerTransform(sample.info$age, family="yjPower")
+yj = powerTransform(sample.info$age, family="yjPower")
 
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
@@ -48,11 +50,11 @@ data = sample.info %>%
   inner_join(b.tmp)
 
 data1 = data %>%
-  sample_frac(0.8)
+  sample_frac(0.1)
 
 data2 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
-  sample_frac(0.5)
+  sample_frac(0.1)
 
 data3 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
@@ -60,7 +62,7 @@ data3 = data %>%
 
 #### TRAINING FIRST SET OF MODELS ###
 
-registerDoParallel(20)
+registerDoParallel(10)
 
 x1 = data1 %>%
   select(starts_with("cg")) %>%
@@ -107,7 +109,7 @@ z2 = models %>%
   lapply(predict, newdata=x2) %>%
   do.call(cbind, .)
 
-y2 = data2$age
+y2 = data2$age.normed
 
 ensemble = cv.glmnet(z2, 
                      y2,
@@ -125,7 +127,7 @@ z3 = models %>%
   lapply(predict, newdata=x3) %>%
   do.call(cbind, .)
 
-y3 = data3$age
+y3 = data3$age.normed
 
 y3.pred = predict(ensemble, 
                   newx=as.matrix(z3),

@@ -51,7 +51,6 @@ ncols = sapply(anova.results, ncol)
 anova.result = anova.results[ncols == 8] %>%
   rbindlist
 
-save(anova.results, file="./Rmd/gene_selection/anova.results.Rdata")
 
 ## process lmer results
 
@@ -68,6 +67,7 @@ summary.result = summary.results[ncols==7] %>%
 age = summary.result %>%
   filter(variable=="age.normed") %>%
   arrange(Estimate)
+save(age, file="./data/age.Rdata")
 
 age.est = age$Estimate
 names(age.est) = age$gene
@@ -83,6 +83,7 @@ tissue.est = tissue$Estimate
 names(tissue.est) = tissue$gene
 
 tissue.gsea = gsea(tissue.est, gmt="ReactomePathways.gmt")
+save(tissue.gsea, file="./data/tissue.gsea.Rdata")
 
 
 pop = anova.result %>%
@@ -102,4 +103,4 @@ afr = summary.result %>%
   filter(variable=="predicted.ancestryEUR")
 afr.est = afr$Estimate
 names(afr.est) = afr$gene
-afr.gsea = gsea(afr.est, gmt="ReactomePathways.gmt")
+afr.gsea = gsea(afr.est, gmt="ReactomePathways.gmt", output.dir=".")
