@@ -66,7 +66,8 @@ summary.result = summary.results[ncols==7] %>%
   rbindlist
 
 age = summary.result %>%
-  filter(variable=="age.normed")
+  filter(variable=="age.normed") %>%
+  arrange(Estimate)
 
 age.est = age$Estimate
 names(age.est) = age$gene

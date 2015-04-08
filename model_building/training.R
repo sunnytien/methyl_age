@@ -18,6 +18,7 @@ age.trans = function(x) sapply(x, function(y) if(y < 20) log10((y + 1)/21) + 1 e
 
 load("./data/sample.info.Rdata")
 load("./data/probe.info.Rdata")
+load("./data/age.Rdata")
 
 select = dplyr::select
 filter = dplyr::filter
@@ -26,7 +27,7 @@ mutate = dplyr::mutate
 
 ### DATA PREPARATION ###
 
-yj = powerTransform(sample.info$age, family="yjPower")
+#yj = powerTransform(sample.info$age, family="yjPower")
 
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
@@ -40,20 +41,18 @@ b.tmp = beta %>%
   gather(gsm.id, beta, starts_with("GSM")) %>% # transposing
   spread(Probe, beta) # this may be more efficient with matrix stuff
 
-
 data = sample.info %>%
   select(gsm.id, age) %>%
   filter(!is.na(age)) %>%
   mutate(age.normed=age.trans(age)) %>%
-  select(-age) %>%
   inner_join(b.tmp)
 
 data1 = data %>%
-  sample_n(3000)
+  sample_frac(0.8)
 
 data2 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
-  sample_n(1000)
+  sample_frac(0.5)
 
 data3 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
@@ -108,7 +107,7 @@ z2 = models %>%
   lapply(predict, newdata=x2) %>%
   do.call(cbind, .)
 
-y2 = data2$age.normed
+y2 = data2$age
 
 ensemble = cv.glmnet(z2, 
                      y2,
@@ -126,7 +125,7 @@ z3 = models %>%
   lapply(predict, newdata=x3) %>%
   do.call(cbind, .)
 
-y3 = data3$age.normed
+y3 = data3$age
 
 y3.pred = predict(ensemble, 
                   newx=as.matrix(z3),
@@ -164,3 +163,5 @@ barplot(perf$cor,
         names.arg=perf$method,
         las=2,
         ylab="Correlation between Age and DNAm Age")
+
+save(ensemble, models, file="./data/ensemble.Rdata")
