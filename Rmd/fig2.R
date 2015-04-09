@@ -10,7 +10,7 @@ tissue %<>%
 
 volcano = ggplot(tissue, aes(Estimate, logP)) + 
   geom_point() + 
-  geom_text(aes(label=label), vjust=2, position="jitter") +
+  geom_text(aes(label=label), vjust=2, size=3) +
   ylab("Log10 P-value") +
   xlab("Methylation Difference Between Liquid and Solid Tissues") + 
   xlim(-max(abs(tissue$Estimate)), max(abs(tissue$Estimate))) + 
@@ -51,6 +51,6 @@ rin2 = ggplot(rin2.data, aes(tissue_state, M, color=tissue_state)) +
   ggtitle("RIN2 promoter")
 
 
-tiff("fig2.tiff", width=33, height=11, units="in", res=150)
+tiff("./figures/fig2.tiff", width=33, height=11, units="in", res=150)
 grid.arrange(volcano, grap2, rin2, ncol=3)
 dev.off()

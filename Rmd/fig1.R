@@ -97,6 +97,6 @@ bsx = ggplot(bsx.data, aes(age.normed, M, color=tissue_state)) +
   ggtitle("BSX promoter") + 
   theme_bw()
 
-tiff("fig1.tiff", width=33, height=11, units="in", res=150)
+tiff("./figures/fig1.tiff", width=33, height=11, units="in", res=150)
 grid.arrange(volcano, bsx, ldhd, ncol=3)
 dev.off()

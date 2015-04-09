@@ -9,7 +9,7 @@ afr %<>%
 
 volcano = ggplot(afr, aes(Estimate, logP)) + 
   geom_point() + 
-  geom_text(aes(label=label), vjust=2, position="jitter") +
+  geom_text(aes(label=label), vjust=2, size=3) +
   ylab("Log10 P-value") +
   xlab("Methylation Difference Between Africans and Europeans") + 
   xlim(-max(abs(afr$Estimate)), max(abs(afr$Estimate))) + 
@@ -48,4 +48,6 @@ or2 = ggplot(or2.data, aes(predicted.ancestry, M, color=predicted.ancestry)) +
   ylab("M value") +
   ggtitle("OR2L13 promoter")
 
-fig3 = grid.arrange(volcano, fmod, or2, ncol=3)
+tiff("./figures/fig3.tiff", width=33, height=11, units="in", res=150)
+grid.arrange(volcano, fmod, or2, ncol=3)
+dev.off()
