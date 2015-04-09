@@ -16,6 +16,9 @@ mutate = dplyr::mutate
 summarize = dplyr::summarize
 llply = plyr::llply
 
+age.trans = function(x) log((x+1)/21) + (x+1)/21
+age.antitrans = function(x) 21 * lambert_W0(exp(21*x + 1)^(1/21)) - 1
+
 get.probe.infos = function(){
   
   #### FILTERING PROBES ####
@@ -68,7 +71,10 @@ get.probe.infos = function(){
     group_by(nearestGeneSymbol) %>%
     filter(N==max(N)) %>%
     ungroup %>%
-    filter(N>=4)
+    filter(N>=4) %>%
+    group_by(nearestGeneSymbol) %>%
+    sample_n(1) %>%
+    ungroup
   
   ## merge all of the relevant information 
   ## for all the probes
@@ -94,9 +100,7 @@ get.model.data = function(probe.info){
   load("./data/predicted.ancestry.Rdata")
   
   sample.info %<>% 
-    mutate(age.normed=ifelse(age<20,
-                             log10((age+1)/21) + 1,
-                             (age+1)/21))
+    mutate(age.normed=age.trans(age))
   
   liquid_tissues = c("Leukocytes", "Lymphoblasts", "Lymphocytes", "Monocytes",
                      "T-cells", "Whole Blood")
@@ -125,18 +129,18 @@ get.model.data = function(probe.info){
   return(data)
 }
 
-# get.db.file = function(db.file){
-#   if(Sys.getenv("TMP") != ""){
-#     db.tmp = paste(Sys.getenv("TMP"), "/db", sep="")
-#     if(!file.exists(db.tmp)){ 
-#       cat(paste("Copying data base to", db.tmp, "\n"))
-#       file.copy(db.file, db.tmp)
-#     } else {
-#       cat(paste("Database found at", db.tmp, "\n"))
-#     }
-#     return(db.tmp)
-#   } else return(db.file)
-# }
+get.db.file = function(db.file){
+  if(Sys.getenv("TMP") != ""){
+    db.tmp = paste(Sys.getenv("TMP"), "/db", sep="")
+    if(!file.exists(db.tmp)){ 
+      cat(paste("Copying data base to", db.tmp, "\n"))
+      file.copy(db.file, db.tmp)
+    } else {
+      cat(paste("Database found at", db.tmp, "\n"))
+    }
+    return(db.tmp)
+  } else return(db.file)
+}
 
 write.probe.info = function(){
   probe.infos = get.probe.infos()
