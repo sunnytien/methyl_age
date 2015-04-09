@@ -84,6 +84,7 @@ names(tissue.est) = tissue$gene
 
 tissue.gsea = gsea(tissue.est, gmt="ReactomePathways.gmt")
 save(tissue.gsea, file="./data/tissue.gsea.Rdata")
+save(tissue, file="./data/tissue.Rdata")
 
 
 pop = anova.result %>%
@@ -104,3 +105,5 @@ afr = summary.result %>%
 afr.est = afr$Estimate
 names(afr.est) = afr$gene
 afr.gsea = gsea(afr.est, gmt="ReactomePathways.gmt", output.dir=".")
+save(afr.gsea, file="./data/afr.gsea.Rdata")
+save(afr, file="./data/afr.Rdata")

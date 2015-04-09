@@ -13,10 +13,10 @@ library("car")
 source("./model_building/get_params.R")
 source("./model_building/util.R")
 
-age.trans = function(x) sapply(x, function(y) if(y < 20) log10((y + 1)/21) + 1 else (y+1)/21)
+#age.trans = function(x) sapply(x, function(y) if(y < 20) log10((y + 1)/21) + 1 else (y+1)/21)
 #age.trans = function(x) yjPower(x, coef(yj))
-#age.trans = function(x) log((x+1)/21) + (x+1)/21
-#age.antitrans = function(x) 21 * lambert_W0(exp(21*x + 1)^(1/21)) - 1
+age.trans = function(x) log((x+1)/21) + (x+1)/21
+age.antitrans = function(x) 21 * lambert_W0(exp(21*x + 1)^(1/21)) - 1
 
 load("./data/sample.info.Rdata")
 load("./data/probe.info.Rdata")
@@ -50,7 +50,7 @@ data = sample.info %>%
   inner_join(b.tmp)
 
 data1 = data %>%
-  sample_frac(0.1)
+  sample_frac(0.8)
 
 data2 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
