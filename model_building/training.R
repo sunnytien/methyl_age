@@ -44,6 +44,7 @@ b.tmp = beta %>%
   spread(Probe, beta) # this may be more efficient with matrix stuff
 
 data = sample.info %>%
+  filter(series.id != "GSE56105") %>%
   select(gsm.id, age) %>%
   filter(!is.na(age)) %>%
   mutate(age.normed=age.trans(age)) %>%
@@ -54,7 +55,7 @@ data1 = data %>%
 
 data2 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
-  sample_frac(0.1)
+  sample_frac(0.5)
 
 data3 = data %>%
   anti_join(data1 %>% select(gsm.id)) %>%
@@ -133,8 +134,6 @@ y3.pred = predict(ensemble,
                   newx=as.matrix(z3),
                   s="lambda.min")
 
-plot(cor(z3, y3, method="spearman"))
-
 y3.pred = matrix(y3.pred, ncol=1)
 colnames(y3.pred) = "ensemble"
 
@@ -159,11 +158,5 @@ perf = cor(cbind(z3, y3.pred), y3) %>%
   mutate(col=cols[method]) %>%
   arrange(col, cor)
 
-par(mar=c(7.1,5.1,2.1,2.1))
-barplot(perf$cor,
-        col=perf$col,
-        names.arg=perf$method,
-        las=2,
-        ylab="Correlation between Age and DNAm Age")
-
-save(ensemble, models, file="./data/ensemble.Rdata")
+save(ensemble, models, data1, data2, data3, x1, x2, x3, 
+     z2, z3, y3.pred, file="./data/ensemble.Rdata")

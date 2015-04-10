@@ -5,7 +5,7 @@ load("~/Projects/methyl_age/data/afr.Rdata")
 
 afr %<>% 
   mutate(logP=-log10(pnorm(-abs(`t value`)))) %>%
-  mutate(label=ifelse(logP>26, gene, ""))
+  mutate(label=ifelse(logP>60 | Estimate > 0.5, gene, ""))
 
 volcano = ggplot(afr, aes(Estimate, logP)) + 
   geom_point() + 
@@ -49,5 +49,5 @@ or2 = ggplot(or2.data, aes(predicted.ancestry, M, color=predicted.ancestry)) +
   ggtitle("OR2L13 promoter")
 
 tiff("./figures/fig3.tiff", width=33, height=11, units="in", res=150)
-grid.arrange(volcano, fmod, or2, ncol=3)
+grid.arrange(volcano, fmod, or2, ncol=2)
 dev.off()

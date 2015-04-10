@@ -5,98 +5,19 @@ date: "8 April 2015"
 output: html_document
 ---
 
-```{r echo=F, warning=FALSE, results='hide', include=F}
-
-library("dplyr")
-library("tidyr")
-library("ggplot2")
-library("magrittr")
-
-
-load("~/Projects/methyl_age/data/age.Rdata")
-load("~/Projects/methyl_age/data/age.gsea.Rdata")
-
-
-age %<>% 
-  mutate(logP=-log10(pnorm(-abs(`t value`)))) %>%
-  mutate(label=ifelse(abs(Estimate) > 0.2, gene, "")) 
-
-age.gsea.reduced = age.gsea %>%
-  arrange(-NES) %>%
-  filter(FDR.q.val < 0.01) %>%
-  filter(SIZE < 500)
-
-```
-
-
-
 
 ## Results
 
-### Methylation patterns with age
+### Linear mixed effects modeling
 
-Globally, we find that a small number of promoters are clear outliers and show extremely strong correlations between age and methylation
+#### Methylation patterns with age
 
-```{r age_volcano, echo=FALSE}
-
-ggplot(age, aes(Estimate, logP)) + 
-  geom_point() + 
-  geom_text(aes(label=label), vjust=2, position="jitter") +
-  ylab("Log10 P-value") +
-  xlab("Effect Size of Age") + 
-  xlim(-max(abs(age$Estimate)), max(abs(age$Estimate)))
-
-```
-
-With GSEA set enrichment approach, we see that gene sets related to the neuronal system have a positive correlation between aging and methylation; whereas cell cycle, metabolic and some immune-related pathways show a negative correlation with age
+Globally, we find that neuronal pathways show hypermethylation with age GSEA PVAL HERE, while metabolic and immune pathways show hypomethylation with age GSEA PVAL HERE. Several promoters are outliers, showing significantly stronger associations with age than the transcriptome as a whole. For instance, the gene BSX demonstrates an exceptionally strong association with age (Fig 1b), and is representative of neuron-specific genes as a whole. In contrast, metabolic and immune-related genes frequently show hypomethylation with age
 
 
-```{r age_gsea, echo=FALSE, fig.width=20, fig.height=10, out.height=10, out.height=5}
-ggplot(age.gsea.reduced, aes(factor(NAME, levels=rev(unique(NAME))), NES)) +
-  geom_point() + 
-  coord_flip() + 
-  ylab("Normalized Enrichment Score") + 
-  xlab("")
-```
 
-For instance, GRM2 is a neuronal gene previously associated with Alzheimer's disease
-
-```{r GRM2, echo=FALSE, warning=FALSE}
-
-  load("~/Projects/methyl_age/data/model_data/GRM2.Rdata")
-  
-  data2 = data %>% 
-    filter(abs(M) < Inf) %>%
-    filter(series.id != "GSE56105") %>%
-    arrange(Position) %>%
-    mutate(Probe=factor(Probe, levels=unique(Probe))) 
-  
-  ggplot(data2, aes(age.normed, M)) +
-    geom_point() + 
-    facet_grid(tissue_state ~ Probe) +
-    stat_smooth(method="lm",se=FALSE) + 
-    ylim(-5, 5)
-
-```
+#### Methylation variation between tissues
 
 
-While DDO is a metabolic gene (also related to neuronal pathways)
-
-```{r DDO, echo=F, warning=FALSE}
-  load("~/Projects/methyl_age/data/model_data/DDO.Rdata")
-  
-  data2 = data %>% 
-    filter(abs(M) < Inf) %>%
-    filter(series.id != "GSE56105") %>%
-    arrange(Position) %>%
-    mutate(Probe=factor(Probe, levels=unique(Probe))) 
-  
-  ggplot(data2, aes(age.normed, M)) +
-    geom_point() + 
-    facet_grid(tissue_state ~ Probe) +
-    stat_smooth(method="lm",se=FALSE) + 
-    ylim(-5, 5)
-
-```
-
+#### Methylation variation between populations
 
