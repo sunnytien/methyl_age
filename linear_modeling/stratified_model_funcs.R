@@ -6,7 +6,10 @@ run.model = function(data, save=T){
   require("lmerTest")
   require("magrittr")
   
-  age.trans = function(x) log((x+1)/21) + (x+1)/21
+  
+  age.trans = function(x) ifelse(x < 20, 
+                                 log((x+1)/21),
+                                 (x - 20) / (21))
   
   contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
   contrasts(data$tissue_state) = contr.sum(length(levels(data$tissue_state)))

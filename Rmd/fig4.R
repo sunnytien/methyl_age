@@ -48,7 +48,7 @@ error = cbind(z3, y3.pred) %>%
   mutate(method=factor(method, levels(perf$method))) %>%
   mutate(family=cols[as.character(method)]) 
 
-performance2 = ggplot(error, aes(method, error, color=family)) +
+performance2 = ggplot(error, aes(method, error, fill=family)) +
   geom_boxplot(outlier.colour=NA) +
   theme_bw() +
   coord_flip() +
