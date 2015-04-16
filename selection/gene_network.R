@@ -2,9 +2,9 @@ library("FDb.InfiniumMethylation.hg19")
 library("dplyr")
 library("igraph")
 library("RColorBrewer")
-library("GRanges")
+library("GenomicRanges")
 
-get.gene.clusters = function(genes=NULL){
+get.gene.clusters = function(genes=NULL, d=20e3){
   
   load("./data/transcripts.Rdata")
   
@@ -29,7 +29,7 @@ get.gene.clusters = function(genes=NULL){
                                     tx2=tx,
                                     gene2=gene)) %>%
     filter(tss1 > tss2) %>%
-    filter(abs(tss1 - tss2) < 200e3)
+    filter(abs(tss1 - tss2) < 2*d)
   
   g = graph.empty(directed=F) + 
     vertices(tss$gene) +
@@ -46,7 +46,7 @@ get.gene.clusters = function(genes=NULL){
     inner_join(tss) %>%
     group_by(cluster) %>%
     summarize(min=min(tss), max=max(tss), chr=chr[1], n=n()) %>%
-    mutate(start=min-200e3, end=max-200e3)
+    mutate(start=min-d, end=max+d)
   
   V(g)$color = brewer.pal(12, "Set3")[cl$membership %% 12 + 1]
   
@@ -54,10 +54,34 @@ get.gene.clusters = function(genes=NULL){
                    ranges=IRanges(cluster.info$start,
                                   cluster.info$end),
                    strand="*",
-                   mcols=DataFrame(cluster=cluster))
+                   mcols=DataFrame(cluster=cluster.info$cluster))
   
   list(g=g,
        cluster.info=cluster.info,
        gene2cluster=gene2cluster,
        grange=granges)
+}
+
+get.gene.granges = function(genes=NULL, d=20e3){
+  
+  load("./data/transcripts.Rdata")
+  
+  grl <- transcriptsBy(TxDb.Hsapiens.UCSC.hg19.knownGene, "gene")
+  gr <- unique(resize(unlist(grl), 1, fix = "start"))
+  
+  names(gr) = NULL
+  
+  tss = as.data.frame(gr) %>%
+    select(chr=seqnames, tss=start, tx=tx_name) %>%
+    inner_join(transcripts)
+  
+  tss = if(!is.null(genes)) tss %>% filter(gene %in% genes) else
+    tss
+  
+  GRanges(seqnames=tss$chr,
+          ranges=IRanges(tss$tss-d,
+                         tss$tss+d),
+          strand="*",
+          mcols=DataFrame(gene=tss$gene))
+  
 }
