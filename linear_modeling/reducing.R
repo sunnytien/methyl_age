@@ -1,3 +1,5 @@
+library("tidyr")
+
 library("data.table")
 
 source("~/Projects/GSEA/R/gsea.R")
@@ -102,8 +104,23 @@ asn.gsea = gsea(asn.est, gmt="ReactomePathways.gmt")
 
 afr = summary.result %>%
   filter(variable=="predicted.ancestryEUR")
-afr.est = afr$Estimate
+afr.est = afr$`t value`
 names(afr.est) = afr$gene
 afr.gsea = gsea(afr.est, gmt="ReactomePathways.gmt", output.dir=".")
 save(afr.gsea, file="./data/afr.gsea.Rdata")
 save(afr, file="./data/afr.Rdata")
+
+## novel method for looking at age
+
+afr.beta = summary.result %>%
+  filter(variable %in% c("(Intercept)", "predicted.ancestryEUR")) %>%
+  select(Estimate, variable, gene) %>%
+  spread(variable, Estimate) %>%
+  mutate(AFR=`(Intercept)`) %>%
+  mutate(EUR=AFR+predicted.ancestryEUR) %>%
+  mutate(AFR=exp(AFR) / (exp(AFR) + 1),
+         EUR=exp(EUR) / (exp(EUR) + 1)) %>%
+  mutate(dBeta=AFR - EUR)
+
+b = afr.beta$dBeta
+names(b) = afr.beta$gene

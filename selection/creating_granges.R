@@ -1,3 +1,6 @@
+## this script converts positive selection statistics
+## into GRanges object
+
 library("data.table")
 library("dplyr")
 library("GenomicRanges")

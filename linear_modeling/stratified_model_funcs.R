@@ -6,7 +6,6 @@ run.model = function(data, save=T){
   require("lmerTest")
   require("magrittr")
   
-  
   age.trans = function(x) ifelse(x < 20, 
                                  log((x+1)/21),
                                  (x - 20) / (21))
