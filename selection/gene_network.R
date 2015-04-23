@@ -4,7 +4,7 @@ library("igraph")
 library("RColorBrewer")
 library("GenomicRanges")
 
-get.gene.clusters = function(genes=NULL, d=20e3){
+get.gene.clusters = function(genes=NULL, d=40e3){
   
   load("./data/transcripts.Rdata")
   
@@ -62,7 +62,7 @@ get.gene.clusters = function(genes=NULL, d=20e3){
        grange=granges)
 }
 
-get.gene.granges = function(genes=NULL, d=20e3){
+get.gene.granges = function(genes=NULL, d=40e3){
   
   load("./data/transcripts.Rdata")
   

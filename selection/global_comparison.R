@@ -4,6 +4,8 @@ library('dplyr')
 
 source("./selection/gene_network.R")
 
+select = dplyr::select
+
 load("./data/afr.Rdata")
 load("./data/fst.Rdata")
 load("./data/xpehh.Rdata")
@@ -21,9 +23,9 @@ all.fst = fst[queryHits(all.fst.hits)] %>%
 
 ## intersect SNPs with top
 top.genes = afr %>%
-  arrange(-abs(Estimate)) %>%
+  arrange(-abs(`t value`)) %>%
   .$gene %>%
-  head(100)
+  head(50)
 
 top = get.gene.clusters(top.genes)
 
@@ -36,18 +38,24 @@ top.fst = fst[queryHits(top.fst.hits)] %>%
   as.data.frame
 
 hist(all.xpehh$mcols.score)
+hist(top.xpehh$mcols.score)
 
-ks.test(top.xpehh$mcols.score, all.xpehh$mcols.score)
-ks.test(top.fst$mcols.score, all.fst$mcols.score)
+pdf("./figures/selection.pdf")
 
 boxplot(top.xpehh$mcols.score, all.xpehh$mcols.score, outline=F,
         names=c("Top DM Promoters", "All Promoters"),
         frame=F,
         ylab="XP-EHH between CEU and YRI")
 
-wilcox.test(top.xpehh$mcols.score, all.xpehh$mcols.score)
+
 
 boxplot(top.fst$mcols.score, all.fst$mcols.score, outline=F,
         names=c("Top DM Promoters", "All Promoters"),
         frame=F,
         ylab="Fst between CEU and YRI")
+
+dev.off()
+
+var.test(top.xpehh$mcols.score, all.xpehh$mcols.score)
+wilcox.test(top.fst$mcols.score, all.fst$mcols.score)
+
