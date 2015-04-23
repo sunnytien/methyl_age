@@ -41,3 +41,5 @@ performance = horvath_ages %>%
 performance %>%
   filter(abs(error) > 50) %>%
   as.data.frame
+
+save(horvath_ages, file="./data/horvath_ages.Rdata")
