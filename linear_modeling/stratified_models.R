@@ -1,3 +1,5 @@
+library("BatchJobs")
+
 source("./linear_modeling/stratified_model_funcs.R")
 source("./linear_modeling/util.R")
 
@@ -18,6 +20,6 @@ model.data.files = list.files("./data/model_data", full.names=T) %>%
 reg = makeRegistry("models2", src.files=c("./linear_modeling/util.R",
                                           "./linear_modeling/stratified_model_funcs.R"))
 
-batchMap(reg, run.models2, model.data.files)
+batchMap(reg, run.models2, model.data.files, )
 
 submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=150))
