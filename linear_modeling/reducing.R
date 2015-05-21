@@ -1,5 +1,5 @@
 library("tidyr")
-
+library("dplyr")
 library("data.table")
 
 source("~/Projects/GSEA/R/gsea.R")
@@ -31,9 +31,7 @@ process.summary = function(x){
   
   df = m %>% 
     as.data.frame %>%
-    mutate(variable=rownames(.)) %>%
     mutate(gene=gene)
-  
   return(df)
 }
 
@@ -59,16 +57,24 @@ anova.result = anova.results[ncols == 8] %>%
 summary.files = list.files("./data/models", full.names=T)
 
 summary.results = summary.files %>%
-  lapply(process.summary)
+  lapply(process.summary) 
 
-ncols = sapply(summary.results, ncol)
-
-summary.result = summary.results[ncols==7] %>%
+ncols = sapply(summary.results, ncol) 
+summary.result = summary.results[ncols==8] %>%
   rbindlist
 
 age = summary.result %>%
-  filter(variable=="age.normed") %>%
-  arrange(Estimate)
+  filter(variable=="age") %>%
+  arrange(Estimate) %>%
+  mutate(q.value=p.adjust(`Pr(>|t|)`, method="fdr"))
+
+age %>%
+  filter(q.value < 0.01) %>%
+  select(gene) %>%
+  write.table(quote=F, row.names=F, col.names=F, sep=",",
+              file="~/Desktop/age_genes.csv")
+
+
 save(age, file="./data/age.Rdata")
 
 age.est = age$Estimate
@@ -78,49 +84,92 @@ age.gsea = gsea(age.est, gmt="ReactomePathways.gmt")
 save(age.gsea, file="./data/age.gsea.Rdata")
 
 
-tissue = summary.result %>%
-  filter(variable=="tissue_state1")
+age.genes = age %>%
+  filter(q.value < 0.01) 
 
-tissue.est = tissue$Estimate
-names(tissue.est) = tissue$gene
+write.table(age.genes %>% select(gene, dBeta) %>% filter(dBeta > 0),
+            sep="\t",
+            row.names=F,
+            col.names=F,
+            file="~/Desktop/age_up.txt")
 
-tissue.gsea = gsea(tissue.est, gmt="ReactomePathways.gmt")
-save(tissue.gsea, file="./data/tissue.gsea.Rdata")
-save(tissue, file="./data/tissue.Rdata")
+write.table(age.genes %>% select(gene, dBeta) %>% filter(dBeta < 0),
+            sep="\t",
+            row.names=F,
+            col.names=F,
+            file="~/Desktop/age_down.txt")
 
 
-pop = anova.result %>%
-  filter(variable=="predicted.ancestry")
-
-pop.est = pop$`F.value`
-names(pop.est) = pop$gene
-pop.gsea = gsea(pop.est, gmt="ReactomePathways.gmt")
-
-asn = summary.result %>%
-  filter(variable=="predicted.ancestryASN")
-asn.est = asn$Estimate
-names(asn.est) = asn$gene
-asn.gsea = gsea(asn.est, gmt="ReactomePathways.gmt")
 
 afr = summary.result %>%
-  filter(variable=="predicted.ancestryEUR")
-afr.est = afr$`t value`
+  filter(variable=="predicted.ancestryEUR") %>%
+  mutate(q.value=p.adjust(`Pr(>|t|)`, method="fdr"))
+
+afr.est = afr$Estimate
 names(afr.est) = afr$gene
 afr.gsea = gsea(afr.est, gmt="ReactomePathways.gmt", output.dir=".")
-save(afr.gsea, file="./data/afr.gsea.Rdata")
-save(afr, file="./data/afr.Rdata")
 
-## novel method for looking at age
 
-afr.beta = summary.result %>%
-  filter(variable %in% c("(Intercept)", "predicted.ancestryEUR")) %>%
-  select(Estimate, variable, gene) %>%
-  spread(variable, Estimate) %>%
-  mutate(AFR=`(Intercept)`) %>%
-  mutate(EUR=AFR+predicted.ancestryEUR) %>%
-  mutate(AFR=exp(AFR) / (exp(AFR) + 1),
-         EUR=exp(EUR) / (exp(EUR) + 1)) %>%
-  mutate(dBeta=AFR - EUR)
+age.pop = summary.result %>%
+  filter(variable=="age:predicted.ancestryEUR") %>%
+  mutate(q.value=p.adjust(`Pr(>|t|)`, method="fdr")) %>%
+  arrange(Estimate)
 
-b = afr.beta$dBeta
-names(b) = afr.beta$gene
+tissue.pop = summary.result %>%
+  filter(variable=="tissue_state1:predicted.ancestryEUR") %>%
+  mutate(q.value=p.adjust(`Pr(>|t|)`, method="fdr")) %>%
+  arrange(Estimate)
+
+tissue.pop.est = tissue.pop$Estimate
+names(tissue.pop.est) = tissue.pop$gene
+
+tissue.pop.gsea = gsea(tissue.pop.est, gmt="ReactomePathways.gmt")
+
+tissue = summary.result %>%
+  filter(variable=="tissue_state1") %>%
+  mutate(q.value=p.adjust(`Pr(>|t|)`, method="fdr")) %>%
+  arrange(Estimate)
+
+get.sig = function(x) x %>%
+  filter(q.value < 0.05) %>%
+  filter(abs(dBeta) > 0.05) %>%
+  .$gene %>%
+  unique
+
+tissue.genes = get.sig(tissue)
+afr.genes = get.sig(afr)
+age.genes = get.sig(age)
+
+pdf("~/Desktop/venn.pdf")
+draw.triple.venn(length(tissue.genes),
+                 length(age.genes),
+                 length(afr.genes),
+                 length(intersect(tissue.genes, age.genes)),
+                 length(intersect(age.genes, afr.genes)),
+                 length(intersect(tissue.genes, afr.genes)),
+                 length(intersect(intersect(tissue.genes, age.genes), afr.genes)),
+                 col=brewer.pal(3, "Set3"),
+                 fill=brewer.pal(3, "Set3"),
+                 euler.d=T,
+                 scaled=T,
+                 category=c("Tissue DMPs", "Age DMPs", "Ancestry DMPs"),
+                 cat.cex=1.3)
+dev.off()
+
+load("./data/model_data/ACKR1.Rdata")
+
+library("ggplot2")
+cg = data %>% filter(Probe=="cg04922029")
+
+ggplot(cg, aes(predicted.ancestry, M, fill=predicted.ancestry)) + 
+  geom_boxplot(outlier.colour=NA) + 
+  facet_grid(Probe ~ tissue_state) +
+  theme_bw() +
+  ylim(-2.5, 3) +
+  xlab("") +
+  ylab("M value") +
+  ggtitle("DARC CpG Site") +
+  guides(color=F) +
+  theme(plot.title=element_text(size=rel(2))) + 
+  theme(axis.title.y=element_text(size=rel(1.3)))
+

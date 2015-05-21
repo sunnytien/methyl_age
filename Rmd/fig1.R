@@ -6,6 +6,7 @@ library("magrittr")
 
 load("~/Projects/methyl_age/data/age.Rdata")
 load("~/Projects/methyl_age/data/age.gsea.Rdata")
+load("~/Projects/methyl_age/data/horvath_ages.Rdata")
 
 
 age %<>% 
@@ -117,3 +118,76 @@ dev.off()
 tiff("./figures/ddo.tiff", width=11, height=11, units="in", res=150)
 ddo
 dev.off()
+
+
+
+MSTN.data = load("~/Projects/methyl_age/data/model_data/MSTN.Rdata") %>%
+  get %>%
+  filter(abs(M) < Inf) %>%
+  filter(series.id != "GSE56105") %>%
+  arrange(Position) %>%
+  mutate(Probe=factor(Probe, levels=unique(Probe))) %>%
+  filter(!is.na(age)) %>%
+  filter(age > 20) %>%
+  filter(predicted.ancestry %in% c("AFR", "EUR"))
+
+MSTN = ggplot(MSTN.data, aes(age, M, color=predicted.ancestry)) +
+  geom_point(size=1) + 
+  facet_grid(predicted.ancestry ~ Probe) +
+  stat_smooth(method="lm",se=FALSE, color="black") + 
+  ylim(-1, 5) +
+  xlab("Normalized Age") + 
+  ylab("M value") +
+  ggtitle("MSTN promoter") + 
+  theme_bw()+
+  scale_x_continuous(breaks=c(1,3,5)) +
+  guides(color=F)
+
+
+
+CD2.data = load("~/Projects/methyl_age/data/model_data/CD2.Rdata") %>%
+  get %>%
+  filter(abs(M) < Inf) %>%
+  filter(series.id != "GSE56105") %>%
+  arrange(Position) %>%
+  mutate(Probe=factor(Probe, levels=unique(Probe))) %>%
+  filter(!is.na(age)) %>%
+  filter(age > 20) %>%
+  filter(predicted.ancestry %in% c("AFR", "EUR"))
+
+CD2 = ggplot(CD2.data, aes(age, M, color=predicted.ancestry)) +
+  geom_point(size=1) + 
+  facet_grid(predicted.ancestry ~ Probe ) +
+  stat_smooth(method="lm",se=FALSE, color="black") + 
+  ylim(-1, 5) +
+  xlab("Normalized Age") + 
+  ylab("M value") +
+  ggtitle("CD2 promoter") + 
+  theme_bw()+
+  scale_x_continuous(breaks=c(1,3,5)) +
+  guides(color=F)
+
+IL21.data = load("~/Projects/methyl_age/data/model_data/IL21.Rdata") %>%
+  get %>%
+  filter(abs(M) < Inf) %>%
+  filter(series.id != "GSE56105") %>%
+  arrange(Position) %>%
+  mutate(Probe=factor(Probe, levels=unique(Probe))) %>%
+  filter(!is.na(age)) %>%
+  filter(age > 20) %>%
+  filter(predicted.ancestry %in% c("AFR", "EUR")) %>%
+  inner_join(horvath_ages) %>%
+  filter(horvath_age < 100) %>%
+  filter(abs(age - horvath_age) < 15)
+
+IL21 = ggplot(IL21.data, aes(age, M, color=predicted.ancestry)) +
+  geom_point(size=1) + 
+  facet_grid(predicted.ancestry ~ Probe) +
+  stat_smooth(method="lm",se=FALSE, color="black") + 
+  ylim(-1, 5) +
+  xlab("Normalized Age") + 
+  ylab("M value") +
+  ggtitle("IL21 promoter") + 
+  theme_bw()+
+  scale_x_continuous(breaks=c(1,3,5)) +
+  guides(color=F)

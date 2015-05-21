@@ -8,7 +8,6 @@ run.model = function(data, horvath_ages, save=T){
   
   m2beta = function(m) exp(m) / (1 + exp(m))
   
-  
   data %<>% mutate(ancestry=factor(ancestry))
   
   contrasts(data$Probe) = contr.sum(length(levels(data$Probe)))
@@ -28,7 +27,7 @@ run.model = function(data, horvath_ages, save=T){
                    optCtrl=list(maxfun=4e5))
   
   cat("Training model\n")
-  m = lmer(M ~ age*Probe + age*tissue_state + age*predicted.ancestry + (1|gsm.id) + (1|tissue),
+  m = lmer(M ~ age*Probe + age*tissue_state + age*predicted.ancestry + tissue_state*predicted.ancestry + (1|gsm.id) + (1|tissue),
           data=data2,
           control=lc)
   
@@ -39,7 +38,7 @@ run.model = function(data, horvath_ages, save=T){
   co = m %>%
     summary %>%
     coef %>%
-    as.data.frame %>%
+    as.data.frame(stringsAsFactors=F) %>%
     mutate(variable=row.names(.))
 
   age = co$Estimate[co$variable == "age"]

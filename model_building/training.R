@@ -29,8 +29,6 @@ mutate = dplyr::mutate
 
 ### DATA PREPARATION ###
 
-yj = powerTransform(sample.info$age, family="yjPower")
-
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
 
@@ -40,8 +38,8 @@ probes = probe.info %>%
 b.tmp = beta %>%
   filter(Probe %in% probes$Probe) %>%
   collect %>%
-  gather(gsm.id, beta, starts_with("GSM")) %>% # transposing
-  spread(Probe, beta) # this may be more efficient with matrix stuff
+  gather(gsm.id, beta, starts_with("GSM")) %>%
+  spread(Probe, beta) 
 
 data = sample.info %>%
   filter(series.id != "GSE56105") %>%

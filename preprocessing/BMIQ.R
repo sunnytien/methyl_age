@@ -65,7 +65,6 @@ random = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Other %>%
 
 ## discarding multiple matching probes
 
-
 types = types[!(names(types) %in% chrXY$probe)]
 types = types[!(names(types) %in% random$probe)]
 
