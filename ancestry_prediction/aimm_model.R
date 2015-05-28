@@ -1,9 +1,15 @@
+## this script trains a model which predicts contental ancestry from
+## Ancestry Informative Methylation Markers (aimms)
+
+
 library("data.table")
 library("randomForest")
 library("glmnet")
 library("dplyr")
 library("IlluminaHumanMethylation450kanno.ilmn12.hg19")
 library("IlluminaHumanMethylation450k.db")
+
+load("./data/sample.info.Rdata")
 
 population = function(x){
   if(grepl("caucasian", x, ignore.case=T)) return("EUR")
@@ -23,12 +29,12 @@ top_n_sites = function(rf, n){
     .$Probe
 }
 
-## preparing AIMMS
-
-load("./data/aimms.Rdata")
-
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
+
+## processing AIMMS (Ancestry Informative Methylation Markers)
+
+load("./data/aimms.Rdata")
 
 chrXY = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Locations %>%
   as.data.frame %>%
@@ -38,34 +44,25 @@ chrXY = IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Locations %>%
 multiple_match = read.table("./data/probes_MM.txt") %>%
   select(Probe=V1)
 
-IlluminaHumanMethylation450kDMR %<>% as.data.frame
+aimms = aimms[!(aimms %in% chrXY$Probe)] # remove probes on X or Y chromosome
+aimms = aimms[!(aimms %in% multiple_match$Probe)] # remove multiple matching probes
+aimms = aimms[aimms %in% (beta %>% select(Probe) %>% collect %>% .$Probe)] # keep only probes in database
 
-aimms = aimms[!(aimms %in% chrXY$Probe)]
-aimms = aimms[!(aimms %in% multiple_match$Probe)]
-aimms = aimms[!(aimms %in% IlluminaHumanMethylation450kDMR$Probe_ID)]
-aimms = aimms[aimms %in% (beta %>% select(Probe) %>% collect %>% .$Probe)]
-
-## loading data
+## loading training data for ancestry model
 
 d = fread("./data/GSE36369/GSE36369_series_matrix.txt_cleaned") %>%
   filter(ID_REF %in% aimms) 
 
-unique.probes = d %>%
-  mutate(ID_REF=factor(ID_REF)) %>%
-  group_by(ID_REF) %>%
-  summarize(N=n()) %>%
-  ungroup %>%
-  filter(N==1)
-
-d2 = d %>%
-  semi_join(unique.probes)
-
-x = d2 %>%
+# create feature matrix for training model
+x = d %>%
   select(-ID_REF) %>%
   as.matrix %>%
   t
-colnames(x) = d2$ID_REF
+colnames(x) = d$ID_REF
 
+# get labels for each sample
+# we have to extract this information from the 
+# header of the GEO file 
 pop = readLines(file("./data/GSE36369/GSE36369_series_matrix.txt"), 200) %>%
   (function(x) grep("Sample_title", x, value=T, ignore.case=T)) %>%
   (function(x) strsplit(x, "\t")[[1]]) %>%
@@ -87,29 +84,15 @@ x.cleaned  = x.cleaned[,cols]
 
 set.seed(123)
 
-rf = randomForest(x.cleaned,
-                  factor(pop.cleaned),
-                  ntree=2000)
+m = cv.glmnet(x.cleaned,
+              pop.cleaned,
+              family="multinomial",
+              keep=T,
+              nfolds=10)
 
-sites.1000 = top_n_sites(rf, 1000)
+## apply model to entire dataset
 
-rf.1000 = randomForest(x.cleaned[,sites.1000],
-                       factor(pop.cleaned),
-                       ntree=2000)
-
-sites.100 = top_n_sites(rf.1000, 100)
-
-rf.100 = randomForest(x.cleaned[,sites.100],
-                       factor(pop.cleaned),
-                       ntree=2000)
-
-
-save(rf, rf.1000, rf.100, file="./data/rf.Rdata")
-
-
-## performance testing
-
-features = rownames(importance(rf.100))
+features = colnames(x.cleaned)
 
 testing = beta %>%
   filter(Probe %in% features) %>%
@@ -121,46 +104,32 @@ x.testing = testing %>%
   t
 colnames(x.testing) = testing$Probe
 
-p = predict(rf.100, newdata=x.testing)
+p = predict(m, 
+            s="lambda.1se",
+            newx=x.testing,
+            type="class")[,1]
 
 predicted.ancestry = data.frame(predicted.ancestry=p,
                                 gsm.id=rownames(x.testing),
                                 stringsAsFactors=F) %>%
   inner_join(sample.info %>% select(gsm.id, series.id, ancestry))
 
-save(predicted.ancestry, file="./data/predicted.ancestry.Rdata")
 
+save(predicted.ancestry, file="./data/predicted.ancestry.Rdata")
 
 ## evalution 
 
+# overall accuracy for individuals in ASN, EUR and AFR
 acc = predicted.ancestry %>%
   filter(!is.na(ancestry)) %>%
   filter(ancestry %in% c("EUR", "AFR", "ASN")) %>%
   group_by(series.id) %>%
   summarize(acc=sum(ancestry == predicted.ancestry) / n())
 
+# pediatric samples with known ancestry
 peds = predicted.ancestry %>%
   filter(series.id=="GSE50759") %>%
   filter(!is.na(ancestry))
 
+# confusion matrix
 table(peds$ancestry, peds$predicted.ancestry)
-
-predicted.ancestry %>%
-  inner_join(sample.info) %>%
-  filter(series.id %in% acc$series.id) %>%
-  group_by(series.id, tissue) %>%
-  summarize
-
-leuko = predicted.ancestry %>%
-  filter(series.id == "GSE36064") %>%
-  filter(!is.na(ancestry)) %>%
-  filter(ancestry %in% unique(predicted.ancestry$predicted.ancestry))
-
-counts = predicted.ancestry %>%
-  inner_join(sample.info %>%
-               select(gsm.id, tissue)) %>%
-  filter(tissue!="Lymphocytes") %>%
-  group_by(tissue, predicted.ancestry) %>%
-  summarize(N=n()) %>%
-  spread(predicted.ancestry, N, fill=0) %>%
-  arrange(tissue)
