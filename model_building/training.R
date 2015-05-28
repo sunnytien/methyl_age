@@ -1,3 +1,11 @@
+## This script trains a set of predictive models
+## which are then combined into a single ensemble model
+
+## The methylation data is split into three separate datasets:
+## 1) 80% of the data is used to train the base models 
+## 2) 10% of the data is used to train the ensemble model
+## 3) 10% of the data is used for testing the final model
+
 library("caret")
 library("randomForest")
 library("glmnet")
@@ -13,8 +21,10 @@ library("car")
 source("./model_building/get_params.R")
 source("./model_building/util.R")
 
-#age.trans = function(x) sapply(x, function(y) if(y < 20) log10((y + 1)/21) + 1 else (y+1)/21)
-#age.trans = function(x) yjPower(x, coef(yj))
+## we have to transform age in some way
+## the literature uses a log-transformation for pediatric samples
+## and a linear-transformation for adult samples
+## Horvath uses a slightly different transformation
 age.trans = function(x) log((x+1)/21) + (x+1)/21
 age.antitrans = function(x) 21 * lambert_W0(exp(21*x + 1)^(1/21)) - 1
 
@@ -75,6 +85,10 @@ ctrl = trainControl(method="repeatedcv",
                     savePredictions=T,
                     allowParallel=T)
 
+## these are the base models used for training the ensemble model
+## see https://topepo.github.io/caret/modelList.html for an explanation
+## of each of the models
+
 model.names = c("pcr",
                 "pls",
                 "ppr",
@@ -96,7 +110,7 @@ models = plyr::llply(model.names,
                      .progress="text")
 
 names(models) = model.names
-models = models[!is.na(models)]
+models = models[!is.na(models)] # a few of the models fail, still bugs in this script
 
 ### TRAINING ENSEMBLE MODEL ###
 
@@ -135,6 +149,8 @@ y3.pred = predict(ensemble,
 y3.pred = matrix(y3.pred, ncol=1)
 colnames(y3.pred) = "ensemble"
 
+
+## Plotting the predictions from each of the models
 
 cols = c(ppr="red",
          svmLinear="green",
