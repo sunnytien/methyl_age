@@ -1,27 +1,34 @@
 library("BatchJobs")
 
 load("./data/horvath_ages.Rdata")
-
 source("./linear_modeling/stratified_model_funcs.R")
 source("./linear_modeling/util.R")
 
-write.model.data = function(probe.info){
-  data = get.model.data(probe.info)
-  save(data, 
-       file=paste("./data/model_data/", probe.info$nearestGeneSymbol[1], ".Rdata", sep=""))
+probe.infos = get.probe.infos() # definted in util.R
+
+run.model.wrapper = function(probe.info, ...){
+  data = get.model.data(probe.info) # get data for given set of probes
+  run.model(data, ...) # train lmer
 }
 
-run.models2 = function(data.file, ...){
-  load(data.file)
-  run.model(data, ...)
-}
+# I'm accessing BIC via the BatchJobs interface
+# it allows distributed computation in R 
+# see https://github.com/tudo-r/BatchJobs for more info
 
-model.data.files = list.files("./data/model_data", full.names=T) %>%
-  grep(".Rdata$", ., value=T)
-
+# first we create a registry
+# status about all the jobs will be logged into this registry
 reg = makeRegistry("models", src.files=c("./linear_modeling/util.R",
-                                          "./linear_modeling/stratified_model_funcs.R"))
+                                         "./linear_modeling/stratified_model_funcs.R"))
 
-batchMap(reg, run.models2, model.data.files, more.args=list(horvath_ages=horvath_ages))
 
-submitJobs(reg, chunk(findNotSubmitted(reg), n.chunks=150))
+# then, we apply run.model.wrapper to each element
+# of probe.infos
+batchMap(reg, 
+         run.model.wrapper, 
+         probe.infos, 
+         more.args=list(horvath_ages=horvath_ages))
+
+# submit jobs to cluster
+submitJobs(reg, 
+           chunk(findNotSubmitted(reg), 
+                 n.chunks=150))
