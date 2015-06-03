@@ -1,0 +1,126 @@
+---
+title: "Epigenomic Aging"
+author: "Eric Kramer"
+date: "1 June 2015"
+output: rmarkdown::tufte_handout
+---
+
+```{r echo=F, include=FALSE}
+library("dplyr")
+library("tidyr")
+library("knitr")
+library("xtable")
+
+options(xtable.comment = FALSE)
+options(xtable.booktabs = TRUE)
+
+load("../data/sample.info.Rdata")
+
+```
+
+# Introduction
+
+DNA methylation is the binding of a methyl-group to guanine on DNA. It is well-known that DNA methylation affects gene expression, and that it is a strong contributor to differences in gene expression during tissue differentiation. More recent work has shown that DNA methylation is also affected by aging, socio-economic status and ancestral background.
+
+# Assembly of DNA methylation database from GEO
+
+
+
+I assembled a database of `r nrow(sample.info)` GEO samples of the Illumina 450k array. This database contains samples from `r length(unique(sample.info$tissue))` tissues, and ages ranging from neonates to `r max(sample.info$age, na.rm=T)` years old.
+
+
+
+
+```{r, echo=FALSE, result='asis'}
+
+tissue_counts = sample.info %>%
+  group_by(tissue) %>%
+  summarize(Count=n()) %>%
+  select(Tissue=tissue, Count) %>%
+  as.data.frame
+
+kable(tissue_counts, caption="Number of samples for each tissue")
+
+```
+
+```{r, fig.width = 10, fig.height = 4, fig.cap = "Age distribution of GEO samples", echo=F, warning=FALSE, fig.fullwidth = TRUE}
+library(ggplot2)
+ggplot(sample.info,
+       aes(age)) +
+  geom_histogram(binwidth=2) +
+  ylab("Count") +
+  xlab("Age")
+```
+
+
+# Normalization 
+
+BMIQ normalization was used on each sample. Downstream analysis found that this normalization minimized batch effects between different GEO entries.
+
+```{r echo=FALSE, fig.cap="PCA of GEO samples, excluding outliers", fig.fullwidth = TRUE, fig.width = 10, fig.height = 4,}
+
+load("./pcas/scores.no.lymphoblasts.Rdata")
+ggplot(scores, aes(PC1, PC2, color=tissue)) +
+  geom_point()
+
+```
+
+
+# Figures
+
+## Margin Figures
+
+Images and graphics play an integral role in Tufte's work. To place figures or tables in the margin you can use the `fig.margin` knitr chunk option. For example:
+
+```{r, fig.margin = TRUE, fig.cap = "Sepal length vs. petal length, colored by species"}
+library(ggplot2)
+qplot(Sepal.Length, Petal.Length, data = iris, color = Species)
+```
+
+Note the use of the `fig.cap` chunk option to provide a figure caption. You can adjust the proportions of figures using the `fig.width` and `fig.height` chunk options. These are specified in inches, and will be automatically scaled down to fit within the handout margin.
+
+## Full Width Figures
+
+You can arrange for figures to span across the entire page by using the `fig.fullwidth` chunk option. 
+
+```{r, fig.width = 10, fig.height = 2, fig.fullwidth = TRUE, fig.cap = "Full width figure"}
+qplot(wt, mpg, data=mtcars, colour=factor(cyl))
+```
+
+Note the use of the `fig.width` and `fig.height` chunk options to establish the proportions of the figure. Full width figures look much better if their height is minimized.
+
+## Main Column Figures
+
+Besides margin and full width figures, you can of course also include figures constrained to the main column.
+
+```{r, fig.cap = "Another figure"}
+qplot(factor(cyl), mpg, data = mtcars, geom = "boxplot")
+```
+
+# Sidenotes
+
+One of the most prominent and distinctive features of this style is the extensive use of sidenotes. There is a wide margin to provide ample room for sidenotes and small figures. Any use of a footnote will automatically be converted to a sidenote. ^[This is a sidenote that was entered using a footnote.] 
+
+If you'd like to place ancillary information in the margin without the sidenote mark (the superscript number), you can use the `\marginnote` command. \marginnote{This is a margin note.  Notice that there isn't a number preceding the note.}
+
+Note also that the two footnote references (`tufte_latex` and `books_be`, both defined below) were also included in the margin on the first page of this document.
+
+# Tables
+
+You can use the **xtable** package to format \LaTeX\ tables that integrate well with the rest of the Tufte handout style. Note that it's important to set the `xtable.comment` and `xtable.booktabs` options as shown below to ensure the table is formatted correctly for inclusion in the document.
+
+
+
+
+[^tufte_latex]: https://code.google.com/p/tufte-latex/
+[^books_be]: http://www.edwardtufte.com/tufte/books_be
+
+
+
+
+
+
+
+
+
+
