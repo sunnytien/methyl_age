@@ -10,28 +10,63 @@ library("dplyr")
 library("tidyr")
 library("knitr")
 library("xtable")
+library(magrittr)
+library("pcaMethods")
+library(ggplot2)
 
 options(xtable.comment = FALSE)
 options(xtable.booktabs = TRUE)
 
 load("../data/sample.info.Rdata")
+load('../data/aimms.Rdata')
 
 ```
 
 # Introduction
 
-DNA methylation is the binding of a methyl-group to guanine on DNA. It is well-known that DNA methylation affects gene expression, and that it is a strong contributor to differences in gene expression during tissue differentiation. More recent work has shown that DNA methylation is also affected by aging, socio-economic status and ancestral background.
+DNA methylation is the binding of a methyl group to a guanine on DNA. Multiple studies have documented correlations between methylation in a gene's promoter and the expression of that gene; however, the exact causal relationship between these variables is unknown and likely depends on a variety of factors, such as the presence of eQTLs and the density of CpG sites in the region.
 
-# Assembly of DNA methylation database from GEO
+DNA methylation plays a crucial role in tissue differentiation. Studies have tracked increasing methylation as a cell proceeds down the differentiation pathway for innate immune cells, while the first principle component of methylation data will separate tissues, if there are multiple tissues present. 
+
+More recent work has shown that environmental factors also affect DNA methylation. Age, socio-economic status and ancestral background can all affect DNA methylation. ^[Disentangling the effects of ancestry and socio-economic presents problems in many datasets where only one of these variables is measured although they are strongly correlated] In general, studies have shown increased methylation with age and low socio-economic status. Nseuronal pathways appear to be the most highly methylated with agining; while stress and immune pathways demonstrate the most increase in methylation due to low socio-economic status.
+
+Hovarth's seminal 2013 paper provided a predictive model of age based on DNA methylation. This model is able to predict a sample's age with astonishing accuracy. More importantly, the model is applicable to a wide-range of tissues. However, we noticed that this model performs worse on samples of African ancestry, likely due to the above-mentioned environmental effects. Because of this, we decided to recalibrate the epigenetic so that is provides improved performance in non-Europeans, while still maintaining performance in diverse tissues.
+
+The following work is an attempt to rebuild the epigenetic clock of Horvath to ensure that the model performs equally well on European, African and Asian samples; while still demonstrating the cross-tissue validity of the original epigenetic clock.
+
+\begin{marginfigure}
+\includegraphics{horvath_clock.png}
+\caption{Horvath's epigenetic clock performs significantly worse on Belgians of african ancestry (AFB) than Belgians of European ancestry (EUB)}
+\end{marginfigure}
+
+This work proceeeds in four primary steps:
+
+1. Preprocessing of publically available methylation data
+2. Creation of predictive model for ethnicity
+3. Promoter-level feature selection
+4. Recalibrarting the epigenetic clock
+
+# Preprocessing of publically available methylation data
+
+In order to recalibrate the epigenetic clock so that is stable across ancestries and tissues, we require a training set with samples from multiple ancestries and multiple tissues.
+
+## Gene Expression Omnibus data
+
+Gene Expression Omnibus (GEO) contains over 20,000 Illumina 450k DNA methylation arrays. Among these, approximately `r nrow(sample.info)` samples are annotated with an age. I downloaded and processed raw data for these GEO series and placed these data into a SQLite database (see $./data/BMIQ.db$ in the project directory) ^[Recent work has allowed SQLite databases to be used within R as $data.frames$. See the $dplyr$ package for more detail]. These samples range in age from newborns to `r max(sample.info$age, na.rm=T)` years old.
+
+```{r, fig.width = 10, fig.height = 4, fig.cap = "Age distribution of GEO samples assembled for this project", echo=F, warning=FALSE, fig.fullwidth = TRUE}
+
+ggplot(sample.info,
+       aes(age)) +
+  geom_histogram(binwidth=2) +
+  ylab("Count") +
+  xlab("Age")
+```
 
 
+This database contains samples from `r length(unique(sample.info$tissue))` tissues. A majority of the samples are whole blood or other blood-based cell types (e.g. monocytes). While solid-tissue samples, such as samples from lung or muscle, are comparatively more rare. Because of the highly unbalanced nature of the dataset, careful statistics must be used to ensure that measured effects are not caused by confounding.
 
-I assembled a database of `r nrow(sample.info)` GEO samples of the Illumina 450k array. This database contains samples from `r length(unique(sample.info$tissue))` tissues, and ages ranging from neonates to `r max(sample.info$age, na.rm=T)` years old.
-
-
-
-
-```{r, echo=FALSE, result='asis'}
+```{r, echo=FALSE, fig.margin=T}
 
 tissue_counts = sample.info %>%
   group_by(tissue) %>%
@@ -43,83 +78,56 @@ kable(tissue_counts, caption="Number of samples for each tissue")
 
 ```
 
-```{r, fig.width = 10, fig.height = 4, fig.cap = "Age distribution of GEO samples", echo=F, warning=FALSE, fig.fullwidth = TRUE}
-library(ggplot2)
-ggplot(sample.info,
-       aes(age)) +
-  geom_histogram(binwidth=2) +
-  ylab("Count") +
-  xlab("Age")
-```
 
 
-# Normalization 
+## Normalization 
 
-BMIQ normalization was used on each sample. Downstream analysis found that this normalization minimized batch effects between different GEO entries.
+BMIQ normalization is one of the most common methods to normalize DNA methylation data. It uses a mixture of beta-distributions and quantile normalization to adjust for differences between the probe types on the chip. After normalization, we see that the PCA nicely separates samples based on tissue. The first principle component separates liquid tissues (whole blood, monocytes, T-cells, leukocytes, etc) from the solid tissues (lung, brain, muscle, pancreas, etc). The second principle component is correlated with age and could represent age-related changes in methylation. 
 
-```{r echo=FALSE, fig.cap="PCA of GEO samples, excluding outliers", fig.fullwidth = TRUE, fig.width = 10, fig.height = 4,}
+```{r echo=FALSE, fig.cap="PCA of GEO samples colored according to tissue group", fig.fullwidth = TRUE, fig.width = 10, fig.height = 5,}
 
 load("./pcas/scores.no.lymphoblasts.Rdata")
+
+scores %<>% 
+  mutate(`Tissue Group`=ifelse(tissue %in% c("Leukocytes", "Monocytes", "T-cells", "Whole Blood"),
+                     "Liquid",
+                     "Solid"))
+
+ggplot(scores, aes(PC1, PC2, color=`Tissue Group`)) +
+  geom_point()
+
+```
+
+If we color the plot according to tissue, rather that tissue group, we see that the two outlying clusters of solid tissues are samples from the cerebellum and the brain, excluding the cerebellum. Additionally, we see sub-structure within each of the clusters. For instance, monocytes in blue and T-cells in purple are clearly separated on the PCA.
+
+```{r echo=FALSE, fig.cap="PCA of GEO samples colored according to tissue", fig.fullwidth = TRUE, fig.width = 10, fig.height = 5,}
+
+load("./pcas/scores.no.lymphoblasts.Rdata")
+
+scores %<>% 
+  mutate(`Tissue Group`=ifelse(tissue %in% c("Leukocytes", "Monocytes", "T-cells", "Whole Blood"),
+                     "Liquid",
+                     "Solid"))
+
 ggplot(scores, aes(PC1, PC2, color=tissue)) +
   geom_point()
 
 ```
 
 
-# Figures
+# Creation of a predictive model for ancestry
 
-## Margin Figures
+Unfortunately, most GEO entires are not annotated with ancestral background. Because of this, we decided to create a predictive model, which is able to impute a sample's ancestry based on it's DNA methylation levels
 
-Images and graphics play an integral role in Tufte's work. To place figures or tables in the margin you can use the `fig.margin` knitr chunk option. For example:
+## Ancestry Informative Methylation Markers (AIMMs)
 
-```{r, fig.margin = TRUE, fig.cap = "Sepal length vs. petal length, colored by species"}
-library(ggplot2)
-qplot(Sepal.Length, Petal.Length, data = iris, color = Species)
-```
+DNA methylation can only occur at guanines immediately preceeded by a cystine, known as CpG sites. SNPs in a CpG site will necessarily disrupt methylation. Conversely, we can use methylation at sites with known SNPs as a way to infer genotypes. 
 
-Note the use of the `fig.cap` chunk option to provide a figure caption. You can adjust the proportions of figures using the `fig.width` and `fig.height` chunk options. These are specified in inches, and will be automatically scaled down to fit within the handout margin.
+In order to create a set of ancestry informative methyaltion markers, I mapped common variants from the 1000 genomes project (>5% MAF in one population) onto the CpG sites on the Illumina 450k array. In total, I discovered `r length(aimms)` methylation sites with a common SNP in the CpG site. ^[The ids for these sites are stored in $./data/aimms.Rdata$ in the project directory.]
 
-## Full Width Figures
+## Training the model 
 
-You can arrange for figures to span across the entire page by using the `fig.fullwidth` chunk option. 
-
-```{r, fig.width = 10, fig.height = 2, fig.fullwidth = TRUE, fig.cap = "Full width figure"}
-qplot(wt, mpg, data=mtcars, colour=factor(cyl))
-```
-
-Note the use of the `fig.width` and `fig.height` chunk options to establish the proportions of the figure. Full width figures look much better if their height is minimized.
-
-## Main Column Figures
-
-Besides margin and full width figures, you can of course also include figures constrained to the main column.
-
-```{r, fig.cap = "Another figure"}
-qplot(factor(cyl), mpg, data = mtcars, geom = "boxplot")
-```
-
-# Sidenotes
-
-One of the most prominent and distinctive features of this style is the extensive use of sidenotes. There is a wide margin to provide ample room for sidenotes and small figures. Any use of a footnote will automatically be converted to a sidenote. ^[This is a sidenote that was entered using a footnote.] 
-
-If you'd like to place ancillary information in the margin without the sidenote mark (the superscript number), you can use the `\marginnote` command. \marginnote{This is a margin note.  Notice that there isn't a number preceding the note.}
-
-Note also that the two footnote references (`tufte_latex` and `books_be`, both defined below) were also included in the margin on the first page of this document.
-
-# Tables
-
-You can use the **xtable** package to format \LaTeX\ tables that integrate well with the rest of the Tufte handout style. Note that it's important to set the `xtable.comment` and `xtable.booktabs` options as shown below to ensure the table is formatted correctly for inclusion in the document.
-
-
-
-
-[^tufte_latex]: https://code.google.com/p/tufte-latex/
-[^books_be]: http://www.edwardtufte.com/tufte/books_be
-
-
-
-
-
-
+I used t
 
 
 
