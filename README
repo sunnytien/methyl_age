@@ -1,0 +1,56 @@
+This folder contains work on the relationship between DNA methylation levels and aging
+
+The directory structure is as follows:
+
+ancestry_prediction/ 
+
+This directory contains code for training predictive model for ancestry based on DNA methylation
+
+1) aimm_model.R: code for training ancestry model and predicting on all samples
+2) ancestry_pca.R: PCA of ancestry-informative markers used for model
+
+data/ 
+
+Contains raw data and saved results from analysis
+
+1) BMIQ.db: SQLite database of ~7,000 methylation arrays
+2) sample.info.Rdata: annotations for samples in BMIQ.db
+3) aimms.Rdata: ancestry informative methylation markers (CpG sites with a common SNP)
+4) gse_info.xlsx: excel spreadsheet with GEO series used to build database
+5) age.Rdata: promoter-level results for association between aging and methylation
+6) tissue.Rdata: promoter-level results for association between tissue type and methylation
+7) afr.Rdata: promoter-level results for association between ancestry (AFR vs EUR) and methylation)
+8) ensemble.Rdata: recalibrated epigenetic clock
+
+figures/
+
+1) gene_plot.R: functions for generating promoter-level plots of methylation
+
+linear_modeling/
+
+Contains code for running linear mixed effects models on each promoter to determine the association between methylation, aging, ancestry and tissue type. The datafiles age.Rdata, tissue.Rdata and afr.Rdata contain the results from these linear models
+
+1) stratifed_models.R: R script that executes linear mixed effects models on the cluster
+2) stratified_model_funcs.R: contains function for training an individual linear model for one promoter
+3) util.R: utility functions (such as querying database to extract all probes in a promoter)
+4) reducing.R: script concatenates the output of all of the models into a single data.frame and creates age.Rdata, tissue.Rdata and afr.Rdata
+
+model_building/
+
+Code for re-building epigenetic clock using ensemble modeling
+
+1) training.R: trains ensemble model using >10 algorithms, creates ensemble.Rdata
+2) get_params.R: contains optimization parameters for all algorithms used in training.R
+3) horvath_model.R: applies Horvath's model to data in SQLite database
+4) util.R: wrapper for model training
+
+preprocessing/
+
+Code for processing raw GEO data, applying BMIQ normalization and inserting the result into the SQLite database
+
+1) BMIQ.R: performs BMIQ normalization, distributed across the cluster
+2) convert_to_sql.R: reads results from BMIQ.R and inserts into SQLite db. Requires node with lots of memory
+3) splitter.R: splits raw GEO series file into individual files for each sample, these files are the input for BMIQ.R
+4) splitter_funcs.R: functions for splitter.R
+5) mappers.R: create map from GEO id to dataset id for each dataset, each raw dataset has internal ids that need to be mapped to GEO ids
+6) mapper_funcs.R: functions for mappers.R
