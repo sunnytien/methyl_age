@@ -29,6 +29,8 @@ top_n_sites = function(rf, n){
     .$Probe
 }
 
+select = dplyr::select
+
 db = src_sqlite("./data/BMIQ.db")
 beta = tbl(db, "BMIQ")
 
@@ -109,13 +111,20 @@ p = predict(m,
             newx=x.testing,
             type="class")[,1]
 
+prob = predict(m,
+               s="lambda.1se",
+               newx=x.testing,
+               type="response")
+
 predicted.ancestry = data.frame(predicted.ancestry=p,
                                 gsm.id=rownames(x.testing),
                                 stringsAsFactors=F) %>%
+  cbind(as.data.frame(prob[,,1])) %>%
   inner_join(sample.info %>% select(gsm.id, series.id, ancestry))
 
 
 save(predicted.ancestry, file="./data/predicted.ancestry.Rdata")
+save(m, file="./data/ancestry_model.Rdata")
 
 ## evalution 
 

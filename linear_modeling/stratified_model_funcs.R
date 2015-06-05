@@ -21,7 +21,7 @@ run.model = function(data, horvath_ages, save=T){
   data2 = data %>% 
     filter(series.id != "GSE56105") %>% # this GEO series is biased
     inner_join(horvath_ages) %>%  
-    filter(horvath_age < 100)  # if horvath_age > 100, sample is likely cancereous
+    filter(horvath_age < 120)  # if horvath_age > 120, sample is likely cancereous
                               # a couple cancer samples may be lurking in the datasets
   
   # set control so that job crashes if lmer doesn't converge
@@ -32,7 +32,7 @@ run.model = function(data, horvath_ages, save=T){
                    optCtrl=list(maxfun=4e5))
   
   cat("Training model\n")
-  m = lmer(M ~ age*Probe + age*tissue_state + age*predicted.ancestry + tissue_state*predicted.ancestry + (1|gsm.id) + (1|tissue),
+  m = lmer(M ~ age*Probe + tissue_state + predicted.ancestry + (1|gsm.id) + (1|tissue),
           data=data2,
           control=lc)
   
