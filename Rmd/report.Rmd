@@ -239,7 +239,7 @@ rbind(tmp, col_counts) %>%
 
 # Promoter-level analysis
 
-Next, I used linear modeling to determine the effects of age, tissue and ancestry on methylation for each promoter of `r length(unique(age$gene))` genes. Importantly, these models look for broad effects. For example, measurement of the effect of aging is an effect with is stable across multiple probe sites, multiple tissues and multiple ethnicity. The creation of a dataset that is this large allows us to measure these effects in a highly accurate manner.
+Next, I used linear modeling to determine the effects of age, tissue and ancestry on methylation for each promoter of `r length(unique(age$gene))` genes. These models look for broad effects. For example, measurement of the effect of aging is an effect with is stable across multiple probe sites, multiple tissues and multiple ethnicity. The creation of a dataset that is this large allows us to measure these effects in a highly accurate manner.
 
 
 ## Preprocessing probes
@@ -248,7 +248,7 @@ Before running the linear models, I discarded probe sites which have a common SN
 
 ## Preprocessing samples
 
-Before running the model, I discarded samples from $GSE56105$ as this GEO series showed a batch effect on principle component analysis, as well as lymphoblastic cell samples. Additionally, I applied Horvath's epigenetic clock to the dataset and discarded `r sum(horvath_ages$horvath_age > 120)` samples with an age greater than 120 as these are likely cancerous samples.
+Before running the model, I discarded samples from $GSE56105$ as this GEO series showed a batch effect on principle component analysis. Additionally, I applied Horvath's epigenetic clock to the dataset and discarded `r sum(horvath_ages$horvath_age > 120)` samples with an age greater than 120 as these are likely cancerous samples.
 
 ## Preprocessing tissue annotations
 
@@ -260,20 +260,9 @@ For each of these promoters, I ran a separate linear mixed effects model ^[See .
 
 ## Results
 
-I defined significant differentially methylated promoters (DMPs) as those that showed both statistical significance (FDR p-value < $0.05$) and biological significant ($\Delta \beta > 0.05$). This resulted in 375 tissue DMPs, 353 age DMPs and 163 ancestry DMPs. 
+I defined significant differentially methylated promoters (DMPs) as those that showed both statistical significance (FDR p-value < $0.05$) and biological significant ($\Delta \beta > 0.05$). This resulted in `r sig(tissue)` tissue-DMPs, `r sig(age)` age-DMPs and `r sig(afr)` ancestry-DMPs. 
 
-
-```{r echo=F}
-tissue %>% 
-  filter(q.value < 0.05) %>%
-  arrange(-abs(dBeta)) %>%
-  select(Gene=gene, Estimate, `$\\Delta \\beta$`=dBeta, `q value`=q.value) %>%
-  head(10) %>%
-  kable(digits=2, caption="Top Tissue DMPs")
-
-```
-
-```{r echo=FALSE, fig.margin=TRUE, fig.width=5, fig.height=5, fig.cap="Venn Diagram of differentially methylated promoters (DMPs)"}
+```{r echo=FALSE, fig.width=6, fig.height=6, fig.cap="Venn Diagram of differentially methylated promoters (DMPs)"}
 
 age = age %>% as.data.frame
 tissue = tissue %>% as.data.frame
@@ -298,6 +287,18 @@ venn.diagram(list("Age DMPs"=sig.genes(age),
 
 ```
 
+
+```{r echo=F}
+tissue %>% 
+  filter(q.value < 0.05) %>%
+  arrange(-abs(dBeta)) %>%
+  select(Gene=gene, Estimate, `$\\Delta \\beta$`=dBeta, `q value`=q.value) %>%
+  head(10) %>%
+  kable(digits=2, caption="Top Tissue DMPs")
+
+```
+
+
 ```{r echo=F, fig.cap="Top Age DMPs"}
 age %>% 
   filter(q.value < 0.05) %>%
@@ -307,7 +308,6 @@ age %>%
   kable(digits=2, caption="Top Age DMPs")
 
 ```
-
 
 
 ```{r echo=F, fig.cap="Top Ancestry DMPs"}
@@ -324,7 +324,7 @@ afr %>%
 
 # Recalibrating the epigenetic clock
 
-To recalibrate the epigenetic clock, I used the age-DMPs as defined by the previous section and use the probes in those promoters to build a predictive model for age based on methylation. I decided to use an ensemble approach for this modeling. I used 80% of the data to train 10 different predictive models using 10 different algorithms. Then, I used 10% of the data (not included in the initial training set) to build an ensemble from these models. In the ensemble, a final prediction is made by taking the weighted average of the predictions from each of the 10 models used as the basis.
+To recalibrate the epigenetic clock, I used the top 10 age-DMPs as defined by the previous section and use the probes in those promoters to build a predictive model for age based on methylation. I decided to use an ensemble approach for this modeling. I used 80% of the data to train 11 different predictive models using 11 different methods. Then, I used 10% of the data to build an ensemble from these models. In the ensemble, a final prediction is made by taking the weighted average of the predictions from each of the 10 models used as the basis ^[See ./model_building/training.R] for the training script.
 
 ```{r echo=FALSE}
 
@@ -342,7 +342,7 @@ cols = c(ppr="Regression",
          cubist="Boosting")
 
 models = data.frame(Abbreviation=names(cols),
-                    Name=c("Principle Pursuit Regression",
+                    Name=c("Projection Pursuit Regression",
                            "Support Vector Machine - Linear Kernel",
                            "Partial Least Squares",
                            "Revelevance Vector Machine - Linear Kernel",
@@ -361,18 +361,20 @@ kable(models %>% arrange(Family), caption="Predictive modeling methods used in e
 
 ```
 
-## Optimizing base models via cross-validation
-
-Many of the base models contain parameters, which need to be optimized for good performance. Thus, for each of the models, I conducted a 10-fold cross-validation with a grid search over reasonable parameters. The set of parameters which showed the best performance for each model during this cross-validation was then used. ^[See ./model_building/get_params.R for a script which has reasonable parameter spaces for each of the models used in the ensemble]
 
 ## Training ensemble model
 
+The model was trained using an 80-10-10 split of the data. 80% of the data was used for training the base models in the ensemble, 10% of the data was used for finding the weights of the models in the ensemble and the final 10% of the data was used for testing. 
 
+Many of the base models contain parameters, which need to be optimized for good performance. Thus, for each of the models, I conducted a 10-fold cross-validation with a grid search over reasonable parameters. The set of parameters which showed the best performance for each model during this cross-validation was then used. ^[See ./model_building/get_params.R for a script which has reasonable parameter spaces for each of the models used in the ensemble]
+
+The ensemble was then trained by using the predictions from the base models as the input features for a linear regression. The resulting ensemble predictions are then a weighted sum of the predictions of the base models. 
 
 ## Test final result
 
-```{r echo=FALSE, fig.width=5, fig.height=5}
+To apply the ensemble model to the testing set, we first make predictions using each of the base models. Then, these predictions are used as another feature set for input into the ensemble model. We can then test the performance of the individual base models as well as the performane of the ensemble models.
 
+```{r echo=FALSE, fig.width=5, fig.height=5}
 load("../data/ensemble.Rdata")
 
 y3 = data3$age.normed
@@ -406,10 +408,9 @@ ggplot(perf, aes(method, V1, fill=family)) +
   ylab("Correlation between observed and predicted age") +
   xlab("Prediction Method") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
- 
-
-
 ```
+
+We see the that ensemble model performs the better than any of the individual models in the ensemble. This is in concordance with literature of predictive modeling, where an ensemble of models typically outpreforms an individual model.Additionall we see that many of the commonly used methods, such as random forests (rf) and support vector machines with a radial kernel (svmRadialCost), show quite similar performances. 
 
 ```{r echo=F, fig.width=5, fig.height=5}
   
@@ -427,4 +428,17 @@ ggplot(scatter.data, aes(age, age.pred)) +
   ylab("Predicted Age") +
   ggtitle("Observed vs Predicted Age: Testing Set")
 ```
+
+# Next Steps
+
+To finish this project, we need to finalize the set of DMPs, finalize the recalibrated epigenetic clock and release and R package so that other groups can apply both the recalibrated epigenetic clock and the predictive model for ancestry.
+
+To finalize the DMPs, we should continue to use both a biological and statistical criteria for significants. Different variations for the linear model used to measure the effect of aging, tissue group and ancestry can be used, and these variation can change the number of DMPs that are detected. 
+
+To finalize the recalibrated epigenetic clock, we should retrain the clock using all probe sites in the age DMPs. The training script in the project directory can do this. 
+
+The recalibrated epigenetic clock should be validated one ancestry and one tissue not included in the training set. For this, I suggest excluding the cerebellar samples, since they are outliers on the PCA plot, for the entirely analysis. Then, the cerebellar samples can be used as a testing set. Additionally, I would use pygmy samples to validate the clock performance on an ancestral group not included in the training set.
+
+Finally, we should create an R package that can apply the recalibrarte epigenetic clock and ancestral model to novel datasets. This package will essentially provide wrapper functions for the prediction methods of the models. The training scripts for the recalibrated epigenetic clock and the ancestry model both have examples of how to apply the model to a new dataset.
+
 
