@@ -32,7 +32,7 @@ run.model = function(data, horvath_ages, save=T){
                    optCtrl=list(maxfun=4e5))
   
   cat("Training model\n")
-  m = lmer(M ~ age*Probe + tissue_state + predicted.ancestry + (1|gsm.id) + (1|tissue),
+  m = lmer(M ~ age.normed*Probe + age.normed*tissue_state + predicted.ancestry + (1|gsm.id) + (1|tissue),
           data=data2,
           control=lc)
   
