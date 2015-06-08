@@ -3,6 +3,7 @@ title: "Epigenomic Aging"
 author: "Eric Kramer"
 date: "1 June 2015"
 output: rmarkdown::tufte_handout
+bibliography: methylation_references.bibtex
 ---
 
 ```{r echo=F, include=FALSE}
@@ -51,7 +52,7 @@ source("../figures/gene_plot.R")
 
 DNA methylation is the binding of a methyl group to a guanine on DNA. Multiple studies have documented correlations between methylation in a gene's promoter and the expression of that gene; however, the exact causal relationship between these variables is unknown and likely depends on a variety of factors, such as the presence of eQTLs and the density of CpG sites in the region.
 
-DNA methylation plays a crucial role in tissue differentiation. Studies have tracked increasing methylation as a cell proceeds down the differentiation pathway for innate immune cells, while the first principle component of methylation data will separate tissues, if there are multiple tissues present. 
+DNA methylation plays a crucial role in tissue differentiation. Studies have tracked increasing methylation as a cell proceeds down the differentiation pathway for innate immune cells \cite{Ji2010} [^Aryee2014], while the first principle component of methylation data will separate tissues, if there are multiple tissues present. 
 
 More recent work has shown that environmental factors also affect DNA methylation. Age, socio-economic status and ancestral background can all affect DNA methylation. ^[Disentangling the effects of ancestry and socio-economic presents problems in many datasets where only one of these variables is measured although they are strongly correlated] In general, studies have shown increased methylation with age and low socio-economic status. Nseuronal pathways appear to be the most highly methylated with agining; while stress and immune pathways demonstrate the most increase in methylation due to low socio-economic status.
 
@@ -441,4 +442,4 @@ The recalibrated epigenetic clock should be validated one ancestry and one tissu
 
 Finally, we should create an R package that can apply the recalibrarte epigenetic clock and ancestral model to novel datasets. This package will essentially provide wrapper functions for the prediction methods of the models. The training scripts for the recalibrated epigenetic clock and the ancestry model both have examples of how to apply the model to a new dataset.
 
-
+# References

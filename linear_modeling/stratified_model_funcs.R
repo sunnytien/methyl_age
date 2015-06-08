@@ -21,8 +21,9 @@ run.model = function(data, horvath_ages, save=T){
   data2 = data %>% 
     filter(series.id != "GSE56105") %>% # this GEO series is biased
     inner_join(horvath_ages) %>%  
-    filter(horvath_age < 120)  # if horvath_age > 120, sample is likely cancereous
-                              # a couple cancer samples may be lurking in the datasets
+    filter(horvath_age < 120)  %>% # if horvath_age > 120, sample is likely cancereous
+    filter(abs(horvath_age - age) < 30) %>% # removing highly discordant samples -- possible bias or cancer
+    filter(age > 20) # removing pediatric samples for this round 
   
   # set control so that job crashes if lmer doesn't converge
   # default just throws a warning -- this is more strict
@@ -32,12 +33,9 @@ run.model = function(data, horvath_ages, save=T){
                    optCtrl=list(maxfun=4e5))
   
   cat("Training model\n")
-  m = lmer(M ~ age.normed*Probe + age.normed*tissue_state + predicted.ancestry + (1|gsm.id) + (1|tissue),
+  m = lmer(M ~ age*Probe + age*tissue_state + age*predicted.ancestry + (1|gsm.id) + (1|tissue),
           data=data2,
           control=lc)
-  
-  cat("Running anova\n")
-  a = lmerTest::anova(m, type=3)
   
   cat("Getting Coefficients\n")
   co = m %>%
@@ -77,8 +75,6 @@ run.model = function(data, horvath_ages, save=T){
   if(save){ 
     cat("Saving\n")
     save(co, file=paste("./data/models/", data$nearestGeneSymbol[1], ".Rdata", sep=""))
-    save(a, file=paste("./data/anovas/", data$nearestGeneSymbol[1], ".Rdata", sep=""))
-    rm(a)
     rm(m)
     rm(data)
     return(T)
