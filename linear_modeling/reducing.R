@@ -1,21 +1,13 @@
 library("tidyr")
 library("dplyr")
 library("data.table")
+library("lme4")
+library("lmerTest")
+library("dplyr")
 
 # this script processes the results from the lmers 
 # and combined everything into a single data.frame
 # for easy analysis 
-
-process.anova = function(x){  
-  gene = gsub("./data/anovas/", "", x) %>%
-    gsub(".Rdata", "", .)
-  df = get(load(x))
-  
-  df %<>% 
-    mutate(variable=rownames(.)) %>%
-    mutate(gene=gene)
-  return(df)
-}
 
 process.summary = function(x){
   gene = gsub("./data/models/", "", x) %>%
@@ -27,9 +19,6 @@ process.summary = function(x){
   return(df)
 }
 
-library("lme4")
-library("lmerTest")
-library("dplyr")
 
 # ## process anova results
 # 
@@ -74,15 +63,6 @@ tissue = summary.result %>%
   arrange(Estimate)
 
 # interactions...
-age.pop = summary.result %>%
-  filter(variable=="age:predicted.ancestryEUR") %>%
-  mutate(q.value=p.adjust(`Pr(>|t|)`, method="fdr")) %>%
-  arrange(Estimate)
-
-tissue.pop = summary.result %>%
-  filter(variable=="tissue_state1:predicted.ancestryEUR") %>%
-  mutate(q.value=p.adjust(`Pr(>|t|)`, method="fdr")) %>%
-  arrange(Estimate)
 
 save(age, file="./data/age.Rdata")
 save(tissue, file="./data/tissue.Rdata")
