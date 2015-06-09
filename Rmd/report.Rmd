@@ -253,7 +253,9 @@ Before running the model, I discarded samples from $GSE56105$ as this GEO series
 
 ## Preprocessing tissue annotations
 
-I decided to group the tissues into two main categories: solid and liquid tissues. These two main categories correspond to the two main clusters shown in the PCA in figure 2. In the linear model, I measure da fixed effect, which corresponds to the methylation differences between these two tissue groups, and I controled for the substructure within each of these groups using random effects.
+I decided to group the tissues into two main categories: solid and liquid tissues. These two main categories correspond to the two main clusters shown in the PCA in figure 2. In the linear model, I measure the fixed effect, which corresponds to the methylation differences between these two tissue groups, and I controled for the substructure within each of these groups using random effects.
+
+
 
 ## Fitting models
 
@@ -261,33 +263,14 @@ For each of these promoters, I ran a separate linear mixed effects model ^[See .
 
 ## Results
 
-I defined significant differentially methylated promoters (DMPs) as those that showed both statistical significance (FDR p-value < $0.05$) and biological significant ($\Delta \beta > 0.05$). This resulted in `r sig(tissue)` tissue-DMPs, `r sig(age)` age-DMPs and `r sig(afr)` ancestry-DMPs. 
+I defined significant differentially methylated promoters (DMPs) as those that showed both statistical significance (FDR p-value < $0.01$) and biological significant ($\Delta \beta > 0.05$). This resulted in `r 1897 + 91 + 16 + 91` tissue-DMPs, `r 291 + 91 + 16 + 17` age-DMPs and `r 91 + 16 + 47 + 14` ancestry-DMPs. 
 
-```{r echo=FALSE, fig.width=6, fig.height=6, fig.cap="Venn Diagram of differentially methylated promoters (DMPs)"}
+\begin{figure}
+\includegraphics{venn_diagram.png}
+\caption{Venn Diagram of Differentially Methylated Promoters}
+\end{figure}
 
-age = age %>% as.data.frame
-tissue = tissue %>% as.data.frame
-afr = afr %>% as.data.frame
-
-filter = dplyr::filter
-select = dplyr::select
-
-
-
-sig.genes = function(x) x %>%
-  filter(q.value < 0.05) %>%
-  filter(dBeta > 0.05) %>%
-  .$gene
-
-venn.diagram(list("Age DMPs"=sig.genes(age),
-                  "Tissue DMPs"=sig.genes(tissue),
-                  "Ancestry DMPs"=sig.genes(afr)),
-             filename=NULL,
-             fill=c("blue","red", "green")) %>%
-  grid.draw
-
-```
-
+Unsuprisingly, the genes that show the strongest difference between tissue groups (i.e. liquid vs. solid) are genes involved in immune activity and tissue differentiation.
 
 ```{r echo=F}
 tissue %>% 
@@ -299,6 +282,12 @@ tissue %>%
 
 ```
 
+\begin{figure}
+\includegraphics{GRAP2.png}
+\caption{GRAP2, a gene used specifically in immune cells, shows high levels of methylation in solid tissues but remains unmethylated in liquid tissues.}
+\end{figure}
+
+Many of the top age-DMPs in this analysis are validated in the literature. For instance, our top age-DMPm EVOLV2 is a well-known marker for aging. In general, we see a pattern where neuronal genes have a positive correlation between aging and metabolic genes show a negative correlation with agining. This effect has been shown previously in the literature. 
 
 ```{r echo=F, fig.cap="Top Age DMPs"}
 age %>% 
@@ -310,6 +299,18 @@ age %>%
 
 ```
 
+\begin{figure}
+\includegraphics{BSX.png}
+\caption{BSX, a representative neuronal gene shows a positive correlation between agining and methylation}
+\end{figure}
+
+
+\begin{figure}
+\includegraphics{LDHD.png}
+\caption{LDHD, a representative metabolic gene shows a negative correlation between agining and methylation}
+\end{figure}
+
+We see that stress genes are the genes that show the largest difference between ethnicities. Again, this finding has been validated in the literature.
 
 ```{r echo=F, fig.cap="Top Ancestry DMPs"}
 afr %>% 
@@ -321,7 +322,29 @@ afr %>%
 
 ```
 
+\begin{figure}
+\includegraphics{FMOD.png}
+\caption{FMOD, a representative stress gene, shows a consistent difference in methylation between ancestral groups}
+\end{figure}
 
+
+## Interactions between age, tissue and ancestry
+
+There are a few examples that I have found ancedotely with significant interactions between age, tissue and ancestry. For instance, the DARC promoter does not show up as an ancestry-DMP because the difference between Africans and Europeans is only apparent in blood based tissues.
+
+\begin{figure}
+\includegraphics{DARC.png}
+\caption{The methylation difference between Africans and Europeans in the DARC promoter only exists in blood-based tissues}
+\end{figure}
+
+Similarly, DDO shows a remarkably strong association between methylation and aging, but this association again only exists in liquid tissues
+
+\begin{figure}
+\includegraphics{DDO.png}
+\caption{The association between methylation and agining in DDO only appears in liquid tissues}
+\end{figure}
+
+These two promoters are examples of a tissue-specific ancestry-DMP and a tissue-specific age-DMP, respectively. This means that both promoters show strong effects of ancestry and aging respectively, but these effects only appear in a single tissue. We can conduct a more systematic search for these promoters.
 
 # Recalibrating the epigenetic clock
 
@@ -362,6 +385,25 @@ kable(models %>% arrange(Family), caption="Predictive modeling methods used in e
 
 ```
 
+
+## Preprocessing age
+
+The transformation applied to the age of samples is a highly technical detail but extremely importnat. In general, methylation differences acculumate exponentially during childhood and then linearly during adulthood. This motivates the transformation used by Horvath where he takes the log-transform of the ages less than 20, but uses a linear transformation between ages greater than 20
+
+\begin{equation}
+x_n = \begin{cases}
+\text{log} \left( \frac{x+1}{\alpha+1} \right) & \text{if } x < \alpha \\
+\frac{x-\alpha}{\alpha+1} & \text{if } x \geq \alpha\
+\end{cases}
+\end{equation}
+where $x$ is the sample's age, $x_n$ is the sample's normalized age and $\alpha$ is age of adulthood, usually taken to be 20.
+
+However, when using this transformation, the predictive models perform poorly around the age of 20. This is likely due to the switch from a logarithmic to a linear transformation. To counter this, I started using an alternative transform shown below.
+
+\begin{equation}
+x_n =  \text{log} \left( \frac{x+1}{\alpha+1} \right) + \frac{x+1}{\alpha+1}
+\end{equation}
+which has a smoother transition from the logarithmic to linear transformations. However, I am still not sure which transformation is the most appropriate. 
 
 ## Training ensemble model
 
@@ -411,9 +453,9 @@ ggplot(perf, aes(method, V1, fill=family)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-We see the that ensemble model performs the better than any of the individual models in the ensemble. This is in concordance with literature of predictive modeling, where an ensemble of models typically outpreforms an individual model.Additionall we see that many of the commonly used methods, such as random forests (rf) and support vector machines with a radial kernel (svmRadialCost), show quite similar performances. 
+We see the that ensemble model performs the better than any of the individual models in the ensemble. This is in concordance with literature of predictive modeling, where an ensemble of models typically outpreforms an individual model. Additionally we see that many of the commonly used methods, such as random forests (rf) and support vector machines with a radial kernel (svmRadialCost), show quite similar performances even though the methods take radically different approaches to predictive modeling.
 
-```{r echo=F, fig.width=5, fig.height=5}
+```{r echo=F, fig.width=5, fig.height=5, fig.fullwidth = TRUE, fig.cap="Observed vs predicted age for the final testing set for training the predictive model"}
   
 age.antitrans = function(x) 21 * lambert_W0(exp(21*x + 1)^(1/21)) - 1
 
@@ -434,12 +476,11 @@ ggplot(scatter.data, aes(age, age.pred)) +
 
 To finish this project, we need to finalize the set of DMPs, finalize the recalibrated epigenetic clock and release and R package so that other groups can apply both the recalibrated epigenetic clock and the predictive model for ancestry.
 
-To finalize the DMPs, we should continue to use both a biological and statistical criteria for significants. Different variations for the linear model used to measure the effect of aging, tissue group and ancestry can be used, and these variation can change the number of DMPs that are detected. 
+To finalize the DMPs, we should continue to use both a biological and statistical criteria for significants. Different variations for the linear model used to measure the effect of aging, tissue group and ancestry can be used, and these variation can change the number of DMPs that are detected. For instance, deciding how to normalize age and the inclusion of different interaction terms can affect the model. Secondly, we can search for tissue-specific age-DMPs and tissue-specific ancestry-DMPs. 
 
-To finalize the recalibrated epigenetic clock, we should retrain the clock using all probe sites in the age DMPs. The training script in the project directory can do this. 
+To finalize the recalibrated epigenetic clock, we should retrain the clock using all probe sites in the age DMPs. The training script in the project directory can do this. The inclusion of many more promoters will significantly increase the training time of the model. However, it should train in under a week. 
 
-The recalibrated epigenetic clock should be validated one ancestry and one tissue not included in the training set. For this, I suggest excluding the cerebellar samples, since they are outliers on the PCA plot, for the entirely analysis. Then, the cerebellar samples can be used as a testing set. Additionally, I would use pygmy samples to validate the clock performance on an ancestral group not included in the training set.
+The recalibrated epigenetic clock should also be validated one ancestry and one tissue not included in the training set. For this, I suggest excluding the cerebellar samples, since they are outliers on the PCA plot, for the entirely analysis. Then, the cerebellar samples can be used as a testing set. Additionally, I would use pygmy samples to validate the clock performance on an ancestral group not included in the training set.
 
 Finally, we should create an R package that can apply the recalibrarte epigenetic clock and ancestral model to novel datasets. This package will essentially provide wrapper functions for the prediction methods of the models. The training scripts for the recalibrated epigenetic clock and the ancestry model both have examples of how to apply the model to a new dataset.
 
-# References
